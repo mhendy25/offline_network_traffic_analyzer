@@ -6,4 +6,4 @@ subprocess.run(['text2pcap', 'test.txt', 'mycapture.cap'])
 
 cap = pyshark.FileCapture('mycapture.cap')
 print(cap[0])
-# hello 
+# 1.1
