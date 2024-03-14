@@ -1,0 +1,17 @@
+No.     Time           Source                Destination           Protocol Length Info
+      1 0.000000       2001:660:3302:2826:4d35:ea87:866a:a3db 2001:660:3302:2826::1:53 DNS      90     Standard query 0x5373 MX google.com
+
+Frame 1: 90 bytes on wire (720 bits), 90 bytes captured (720 bits) on interface en0, id 0
+Ethernet II, Src: Apple_ee:de:ca (f0:18:98:ee:de:ca), Dst: aa:01:00:00:02:17 (aa:01:00:00:02:17)
+Internet Protocol Version 6, Src: 2001:660:3302:2826:4d35:ea87:866a:a3db, Dst: 2001:660:3302:2826::1:53
+User Datagram Protocol, Src Port: 65460, Dst Port: 53
+Domain Name System (query)
+
+No.     Time           Source                Destination           Protocol Length Info
+      2 0.007396       2001:660:3302:2826::1:53 2001:660:3302:2826:4d35:ea87:866a:a3db DNS      570    Standard query response 0x5373 MX google.com MX 40 alt3.aspmx.l.google.com MX 50 alt4.aspmx.l.google.com MX 30 alt2.aspmx.l.google.com MX 20 alt1.aspmx.l.google.com MX 10 aspmx.l.google.com NS ns3.google.com NS ns2.google.com NS ns4.google.com NS ns1.google.com AAAA 2a00:1450:4010:c1c::1b AAAA 2404:6800:4003:c00::1b AAAA 2a00:1450:400c:c00::1b AAAA 2404:6800:4008:c13::1b AAAA 2a00:1450:4025:c03::1b AAAA 2001:4860:4802:34::a AAAA 2001:4860:4802:38::a AAAA 2001:4860:4802:36::a AAAA 2001:4860:4802:32::a A 142.250.150.27 A 74.125.200.27 A 142.251.5.27
+
+Frame 2: 570 bytes on wire (4560 bits), 570 bytes captured (4560 bits) on interface en0, id 0
+Ethernet II, Src: aa:01:00:00:02:17 (aa:01:00:00:02:17), Dst: Apple_ee:de:ca (f0:18:98:ee:de:ca)
+Internet Protocol Version 6, Src: 2001:660:3302:2826::1:53, Dst: 2001:660:3302:2826:4d35:ea87:866a:a3db
+User Datagram Protocol, Src Port: 53, Dst Port: 65460
+Domain Name System (response)
