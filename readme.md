@@ -2,7 +2,7 @@ Welcome to Sniffsift!
 
 # About the project:
 
-You **must** read the project description fully. [Here it is] (https://docs.google.com/document/d/1M-ddBvBMP35zRBvscQOrg7LrPI9WOsx9ILS6wI63I4g/edit#heading=h.ercuy2bce6ve). **Please read the description linked above.** Otherwise you will not understand what comes below. 
+You **must** read the project description fully. [Here it is](https://docs.google.com/document/d/1M-ddBvBMP35zRBvscQOrg7LrPI9WOsx9ILS6wI63I4g/edit#heading=h.ercuy2bce6ve). **Please read the description linked above.** Otherwise you will not understand what comes below. 
 
 In the file cli_tool.py is a command line tool that can read and parse packets. You can test it with the text.txt hexdump file. This hexdump has over 700 packets but we only care about 30 of them as per the requirements of the project. **Read the project description above to familiasrize yourself with the requirements.** We go from 700+ to 30 packets because the project requires that we focus on **DNS and DHCP packets** only. 
 
