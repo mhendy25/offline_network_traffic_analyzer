@@ -9,11 +9,14 @@ In the file cli_tool.py is a command line tool that can read and parse packets. 
 
 # Implementation
 
-The workflow is simple: hexdump plaintext file --> pcap file --> list objects
+The workflow is simple:
+hexdump plaintext file --> pcap file --> list objects
 
 The transition hexdump plaintext file --> pcap file takes place in read_packets.py. 
 
-read_packets.py returns two lists: packet_summary: lst of lst of str (a summary of the layers of a packet) , lst_layer: lst of lst of layer objets (the full string content of each layer)
+read_packets.py returns two lists:
+- packet_summary: lst of lst of str (a summary of the layers of a packet)
+- lst_layer: lst of lst of layer objets (the full string content of each layer)
 
 The cli_tool.py file is the command line interface. It displays the packets read in read_packets.py via the "read" command. Check the help mannual by running `help command_name` once you have started the command line tool.
 
