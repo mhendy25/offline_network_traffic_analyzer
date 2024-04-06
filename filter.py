@@ -2,7 +2,7 @@ import pyshark
 
 
 #Change the file as needed
-pcap_file = '/Users/justintong/Desktop/NetworksProject/offline_network_traffic_analyzer/lab01-cn-S24.pcapng'
+pcap_file = ''
 
 # Initialize PyShark capture
 original_cap = pyshark.FileCapture(pcap_file, keep_packets=True)
