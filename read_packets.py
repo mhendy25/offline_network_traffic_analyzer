@@ -5,8 +5,8 @@ def parse(hexdump):
     #subprocess.check_output(['ls', '-l'])  # All that is technically needed...
 
     #convert from hex dump to pcap through the commad line
-    subprocess.run(['text2pcap', hexdump, 'mycapture3.pcap', '-F', 'pcap'])
-    print('\n\n')
+    # subprocess.run(['text2pcap', hexdump, 'mycapture3.pcap', '-F', 'pcap'])
+    # print('\n\n')
 
     cap = pyshark.FileCapture('mycapture3.pcap')
 
@@ -82,9 +82,9 @@ def summary(pkt):
             # packet_dict["dhcp"] = ["DHCP: "+pkt.dhcpv6.options]
 
         if ("DATA" in layers):
-            packet_summary.append("Data (" + pkt.data.len + " bytes)")
-            lst_layer.append("Data: {0}\n[Length: {1}]".format(pkt.data.data, pkt.data.len))
-            packet_dict["data"] = ["Data: "+pkt.data.data, "Length: "+pkt.data.len]
+            packet_summary.append("Data (" + pkt.data.data_len + " bytes)")
+            lst_layer.append("Data: {0}\n[Length: {1}]".format(pkt.data.data, pkt.data.data_len))
+            packet_dict["data"] = ["Data: "+pkt.data.data, "Length: "+pkt.data.data_len]
         
         packet_list_dict.append(packet_dict)
 
