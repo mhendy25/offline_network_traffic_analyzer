@@ -39,7 +39,7 @@ Set up brew
 - get rid of old wireshark. Delete app and run `brew uninstall --force wireshark` to be safe
 - Install wireshark by running `brew install wireshark` and `brew install --cask wireshark`
 - Check that it worked `brew info --cask wireshark`
-- Add an alias to your path directory alias `wireshark='/Applications/Wireshark.app/Contents/MacOS/Wireshark'`
+- Add an alias to your path directory `alias wireshark='/Applications/Wireshark.app/Contents/MacOS/Wireshark'`
 
 
 
