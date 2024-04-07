@@ -178,6 +178,9 @@ class sniffsift(cmd.Cmd):
         #     print()
 
     def do_clear_filter(self,arg):
+        '''
+        Clears Filters
+        '''
         self.filtered_packets = {}
         self.last_filtered_packets = {}
 
