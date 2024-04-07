@@ -9,6 +9,7 @@ class sniffsift(cmd.Cmd):
         self.file = None 
         self.all_packets = []
         self.last_filtered_packets = []
+        self.current_filters = {'src_ip': None, 'dst_ip': None, 'protocol': None}
 
     def default(self, line):
         print(f"Unknown command: {line} \nPlease use 'help' to see a list of commands")
@@ -73,6 +74,28 @@ class sniffsift(cmd.Cmd):
         except Exception as e:
             print(f"Failed to read or parse the file: {e}")
         print(f"Read and stored {len(self.all_packets)} packets.")
+
+    def apply_filters(self, packet):
+        try:
+            if self.current_filters['src_ip'] and packet['src'] != self.current_filters['src_ip']:
+                return False
+            if self.current_filters['dst_ip'] and packet['dst'] != self.current_filters['dst_ip']:
+                return False
+            if self.current_filters['protocol'] and self.current_filters['protocol'].upper() not in packet['protocol'].upper():
+                return False
+        except KeyError:  # If any key is missing, the packet does not match
+            return False
+        return True
+
+    def update_filtered_packets(self):
+        self.filtered_packets = [packet for packet in self.all_packets if self.apply_filters(packet)]
+        self.last_filtered_packets = self.filtered_packets
+
+    def set_filter(self, src_ip=None, dst_ip=None, protocol=None):
+        self.current_filters['src_ip'] = src_ip
+        self.current_filters['dst_ip'] = dst_ip
+        self.current_filters['protocol'] = protocol
+        self.update_filtered_packets()
     
     def do_filter(self, arg):
         '''
@@ -85,54 +108,101 @@ class sniffsift(cmd.Cmd):
         # TODO: filter multiple in the same read
         # TODO: send the actual summary instead of the list of dicts 
         # Parse the filter string into a dictionary
-        filters = {}
-        try:
-            for item in arg.split(","):
-                key, value = item.split("=")
-                key = key.replace('"', '')
-                value = value.replace('"', '')
-                filters[key] = value
-        except:
-            print("Invalid filter format. Please use the format src_ip={src_ip},dst_ip={dst_ip},src_port={src_port},dst_port={dst_port},size={size} You can include any combination of these filters.")
+
+        print("Set your filters (press enter to skip):")
+
+        src_ip = input("Source IP filter: ").strip() or None
+        dst_ip = input("Destination IP filter: ").strip() or None
+        protocol = input("Protocol filter: ").strip().upper() or None
+
+        # Apply the filters
+        self.set_filter(src_ip=src_ip, dst_ip=dst_ip, protocol=protocol)
+
+        # Feedback to the user
+        if any([src_ip, dst_ip, protocol]):
+            print("Filters applied. Use 'display' to see filtered packets.")
+        else:
+            print("No filters applied.")
+        # filters = {}
+        # try:
+        #     for item in arg.split(","):
+        #         key, value = item.split("=")
+        #         filters[key.strip()] = value.strip()
+        # except ValueError:
+        #     print("Invalid filter format. Please use the correct format.")
+        #     return
+
+        # self.set_filter(src_ip=filters.get('src_ip'), dst_ip=filters.get('dst_ip'), protocol=filters.get('protocol'))
+
+        # # Printing filtered packets
+        # print(f"Filtered {len(self.filtered_packets)} packets based on current filters.")
+        # for packet in self.filtered_packets:
+        #     print(packet)
+
+        # print("my filters", filters)
+
+        # filters_count = len(filters)
+        # print("filters_count", filters_count)
+        # # Read and parse the packets
+        # summary, layers, list_packet_dict = parse(self.file)
+        # print("list_packet_dict", list_packet_dict)
+        # # Filter the packets
+        # filtered_packets = []
+        # for packet in range(len(list_packet_dict)):
+        #     # handle filter by port
+        #     matched = 0 
+        #     if 'src_port' in filters and list_packet_dict[packet][0]['eth'][0] == 'Src: '+filters['src_port']:
+        #         matched +=1
+        #     if 'dst_port' in filters and list_packet_dict[packet][0]['eth'][1] == 'Dst: '+filters['dst_port']:
+        #         matched +=1
+        #     # handle filter by IP
+        #     if 'src_ip' in filters and list_packet_dict[packet][0]['ip'][1] == 'Src: '+filters['src_ip']:
+        #         matched +=1
+        #     if 'dst_ip' in filters and list_packet_dict[packet][0]['ip'][2] == 'Dst: '+filters['dst_ip']:
+        #         matched +=1
+        #     # handle filter by size (data length)
+        #     # check if the packet has data first
+        #     if 'size' in filters and 'data' in list_packet_dict[packet][0] and list_packet_dict[packet][0]['data'][1] == 'Length: '+filters['size']:
+        #         matched +=1
+        #     if matched == filters_count:
+        #         filtered_packets.append(list_packet_dict[packet])
+        #     # test filter is below
+        #     #  filter "src_port=00:14:0b:33:33:27,dst_port=d0:7a:b5:96:cd:0a,src_ip=192.168.1.101,dst_ip=67.252.131.62,size=10"
+
+        # # Print the filtered packets
+        # print("the length of the filtered packets is" , len(filtered_packets))
+        # print("Filtered packets:")
+        # # print(filtered_packets)
+        # for packet in filtered_packets:
+        #     print(packet)
+        #     print()
+
+    def do_clear_filter(self,arg):
+        self.filtered_packets = {}
+        self.last_filtered_packets = {}
+
+    def do_display(self, arg):
+        '''
+        Display filtered packets. Shows details of packets after filters have been applied.
+        '''
+        if not self.filtered_packets:
+            print("No filtered packets to display. Please apply filters first.")
             return
 
-        print("my filters", filters)
+        print("Displaying filtered packets:")
+        print("----------------------------------------------------------------")
+        for idx, packet in enumerate(self.filtered_packets, start=1):
+            src = packet.get("src", "Unknown")
+            dst = packet.get("dst", "Unknown")
+            protocol = packet.get("protocol", "Unknown")
+            # Add any other packet details you wish to display here
 
-        filters_count = len(filters)
-        print("filters_count", filters_count)
-        # Read and parse the packets
-        summary, layers, list_packet_dict = parse(self.file)
-        print("list_packet_dict", list_packet_dict)
-        # Filter the packets
-        filtered_packets = []
-        for packet in range(len(list_packet_dict)):
-            # handle filter by port
-            matched = 0 
-            if 'src_port' in filters and list_packet_dict[packet][0]['eth'][0] == 'Src: '+filters['src_port']:
-                matched +=1
-            if 'dst_port' in filters and list_packet_dict[packet][0]['eth'][1] == 'Dst: '+filters['dst_port']:
-                matched +=1
-            # handle filter by IP
-            if 'src_ip' in filters and list_packet_dict[packet][0]['ip'][1] == 'Src: '+filters['src_ip']:
-                matched +=1
-            if 'dst_ip' in filters and list_packet_dict[packet][0]['ip'][2] == 'Dst: '+filters['dst_ip']:
-                matched +=1
-            # handle filter by size (data length)
-            # check if the packet has data first
-            if 'size' in filters and 'data' in list_packet_dict[packet][0] and list_packet_dict[packet][0]['data'][1] == 'Length: '+filters['size']:
-                matched +=1
-            if matched == filters_count:
-                filtered_packets.append(list_packet_dict[packet])
-            # test filter is below
-            #  filter "src_port=00:14:0b:33:33:27,dst_port=d0:7a:b5:96:cd:0a,src_ip=192.168.1.101,dst_ip=67.252.131.62,size=10"
+            print(f"Packet #{idx}:")
+            print(f"  Source:      {src}")
+            print(f"  Destination: {dst}")
+            print(f"  Protocol:    {protocol}\n")
+            print("----------------------------------------------------------------")
 
-        # Print the filtered packets
-        print("the length of the filtered packets is" , len(filtered_packets))
-        print("Filtered packets:")
-        # print(filtered_packets)
-        for packet in filtered_packets:
-            print(packet)
-            print()
     def do_clear(self, arg):
         '''
         `clear`
