@@ -7,6 +7,8 @@ class sniffsift(cmd.Cmd):
     def __init__(self) :
         super().__init__()
         self.file = None 
+        self.all_packets = []
+        self.last_filtered_packets = []
 
     def default(self, line):
         print(f"Unknown command: {line} \nPlease use 'help' to see a list of commands")
@@ -49,13 +51,28 @@ class sniffsift(cmd.Cmd):
         self.file = file_name
         count = 1
         # read and parse the file content
-        summary, layers,_ = parse(self.file)
-        for item in summary:
-            print("Packet", count)
-            for subitem in item:
-                print(subitem)
-            count+=1
-            print()
+        try:
+            summary, layers, _ = parse(self.file)
+            for item in summary:
+                print(f"Packet {count}")
+                src, dst, protocol = "Unknown", "Unknown", "Unknown"
+                for subitem in item:
+                    print(subitem)
+                    # Example extraction logic based on your summary structure
+                    if "Src:" in subitem:
+                        src = subitem.split("Src: ")[1].split(",")[0]
+                    if "Dst:" in subitem:
+                        dst = subitem.split("Dst: ")[1]
+                    if any(proto in subitem for proto in ["Ethernet", "Internet Protocol", "User Datagram"]):
+                        protocol = subitem.split(",")[0]  # Simplistic approach
+
+                self.all_packets.append({"src": src, "dst": dst, "protocol": protocol})
+                count += 1
+                print()
+
+        except Exception as e:
+            print(f"Failed to read or parse the file: {e}")
+        print(f"Read and stored {len(self.all_packets)} packets.")
     
     def do_filter(self, arg):
         '''
@@ -133,7 +150,60 @@ class sniffsift(cmd.Cmd):
         '''
         os.system('ls')
         print()
+
+    def do_graph(self, flag):
+        '''
+        `graph {flag}`
+
+        Visualize packet flows. Flag 0 for all packets, 1 for filtered packets.
+        '''
+        flag = flag.strip()
+        if flag not in ['0', '1']:
+            print("Invalid flag. Use 0 for all packets or 1 for filtered packets.")
+            return
+
+        packets_to_graph = self.last_filtered_packets if flag == '1' else self.all_packets
+
+        if not packets_to_graph:
+            print("No packets to display. Please ensure packets are loaded or filtered correctly.")
+            return
+
+        print("Packet Flows:")
+        print("----------------------------------------------------------------")
+
+        for idx, packet in enumerate(packets_to_graph, start=1):
+            src = packet.get("src", "Unknown")
+            dst = packet.get("dst", "Unknown")
+            protocol = packet.get("protocol", "Unknown")
+
+            # Creating a multi-line format for each packet
+            print(f"Packet #{idx}:")
+            print(f"  Source:      {src}")
+            print(f"               |")
+            print(f"               |  [{protocol}]")
+            print(f"               V")
+            print(f"  Destination: {dst}\n")
+            print("----------------------------------------------------------------")
     
+    def do_distribution(self, arg):
+        '''
+        'distribution`
+
+        Shows the protocol distribution
+        '''
+        protocol_counts = {}
+        for packet in self.all_packets:
+            protocol = packet.get("protocol", "Unknown")
+            if protocol not in protocol_counts:
+                protocol_counts[protocol] = 0
+            protocol_counts[protocol] += 1
+
+        total_packets = sum(protocol_counts.values())
+        print("Protocol Distribution:")
+        for protocol, count in protocol_counts.items():
+            percentage = (count / total_packets) * 100
+            print(f"{protocol}: {percentage:.2f}% ({count} packets)")
+        
 
     def validate_file(self, file_name):
         '''
