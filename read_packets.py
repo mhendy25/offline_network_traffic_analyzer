@@ -82,9 +82,9 @@ def summary(pkt):
             # packet_dict["dhcp"] = ["DHCP: "+pkt.dhcpv6.options]
 
         if ("DATA" in layers):
-            packet_summary.append("Data (" + pkt.data.data_len + " bytes)")
-            lst_layer.append("Data: {0}\n[Length: {1}]".format(pkt.data.data, pkt.data.data_len))
-            packet_dict["data"] = ["Data: "+pkt.data.data, "Length: "+pkt.data.data_len]
+            packet_summary.append("Data (" + pkt.data.len + " bytes)")
+            lst_layer.append("Data: {0}\n[Length: {1}]".format(pkt.data.data, pkt.data.len))
+            packet_dict["data"] = ["Data: "+pkt.data.data, "Length: "+pkt.data.len]
         
         packet_list_dict.append(packet_dict)
 
