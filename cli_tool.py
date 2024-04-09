@@ -1,6 +1,7 @@
 import cmd
 from read_packets import parse
 import os
+import re
 
 class sniffsift(cmd.Cmd):
     
@@ -9,7 +10,10 @@ class sniffsift(cmd.Cmd):
         self.file = None 
 
     prompt = "+_+ "
-    intro = '\nWelcome to sniffsift, an offline network traffic analyzer.\nThe input of the analyzer is a hexdump text file. Type "help" to see all the available commands. For information on how to use a command, type "help + {command_name}"\n'
+    intro = """\nWelcome to sniffsift, an offline network traffic analyzer.
+The input of the analyzer is a hexdump text file.
+Type "help" to see all the available commands. 
+For information on how to use a command, type "help <command>"\n"""
 
     # Your CLI commands and functionality will go here
 
@@ -54,30 +58,44 @@ class sniffsift(cmd.Cmd):
             count+=1
             print()
     
+
     def do_filter(self, arg):
         '''
         `filter {filter_string}`
 
         Filter packets based on the filter string. The filter string should be in the format:
-        "src_ip={src_ip},dst_ip={dst_ip},src_port={src_port},dst_port={dst_port},size={size}"
+        "src_ip={src_ip}, dst_ip={dst_ip}, src_port={src_port}, dst_port={dst_port}, size={size}"
         You can include any combination of these filters.
         '''
         # TODO: filter multiple in the same read
         # TODO: send the actual summary instead of the list of dicts 
         # Parse the filter string into a dictionary
+
+        # pattern = r"(src_ip={[^}]*})?,?\s*(dst_ip={[^}]*})?,?\s*(src_port={[^}]*})?,?\s*(dst_port={[^}]*})?,?\s*(size={[^}]*})?"
+
+        
         filters = {}
         for item in arg.split(","):
             key, value = item.split("=")
             key = key.replace('"', '')
             value = value.replace('"', '')
             filters[key] = value
-        print("my filters", filters)
+
+        # Read and parse the packets
+
+        if (self.file):
+            summary, layers, list_packet_dict = parse(self.file, False)
+            
+        else:
+            print("\nOne must first read a packet to filter it!\n")
+            return
+
+        print("\nActive filters:\n", filters)
 
         filters_count = len(filters)
-        print("filters_count", filters_count)
-        # Read and parse the packets
-        summary, layers, list_packet_dict = parse(self.file)
-        print("list_packet_dict", list_packet_dict)
+        print("\nNumber of filters: {0}\n".format(filters_count))
+
+        # print("list_packet_dict", list_packet_dict)
         # Filter the packets
         filtered_packets = []
         for packet in range(len(list_packet_dict)):
@@ -102,12 +120,17 @@ class sniffsift(cmd.Cmd):
             #  filter "src_port=00:14:0b:33:33:27,dst_port=d0:7a:b5:96:cd:0a,src_ip=192.168.1.101,dst_ip=67.252.131.62,size=10"
 
         # Print the filtered packets
-        print("the length of the filtered packets is" , len(filtered_packets))
-        print("Filtered packets:")
+        print("Number of filtered packets: {0}\n".format(len(filtered_packets)) )
+
+
+
+        print("Filtered packets:\n")
         # print(filtered_packets)
         for packet in filtered_packets:
             print(packet)
             print()
+
+
     def do_clear(self, arg):
         '''
         `clear`
@@ -140,9 +163,11 @@ class sniffsift(cmd.Cmd):
         elif not self.valid_filetype(file_name):
             print(INVALID_FILETYPE_MSG%(file_name))
         
+
     def valid_path(self, path):
         # validate file path
         return os.path.exists(path)
+    
     
     def valid_filetype(self, file_name):
         # validate file type
