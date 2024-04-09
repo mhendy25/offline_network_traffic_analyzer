@@ -99,11 +99,9 @@ class sniffsift(cmd.Cmd):
     
     def do_filter(self, arg):
         '''
-        `filter {filter_string}`
+        `filter`
 
-        Filter packets based on the filter string. The filter string should be in the format:
-        "src_ip={src_ip},dst_ip={dst_ip},src_port={src_port},dst_port={dst_port},size={size}"
-        You can include any combination of these filters.
+        Filter packets based on the filter string. Please follow each command and enter the desired source IP address, destination IP address, and protocol
         '''
         # TODO: filter multiple in the same read
         # TODO: send the actual summary instead of the list of dicts 
