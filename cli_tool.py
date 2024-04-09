@@ -206,6 +206,31 @@ class sniffsift(cmd.Cmd):
             print(f"  Protocol:    {protocol}\n")
             print("----------------------------------------------------------------")
 
+    
+    def do_show_all(self, arg):
+        '''
+        Command to show all packets that have been read.
+        '''
+
+        if not self.all_packets:
+            print("No packets to display. Please read a file first.")
+            return
+
+        print("Displaying packets:")
+        print("----------------------------------------------------------------")
+        for idx, packet in enumerate(self.all_packets, start=1):
+            src = packet.get("src", "Unknown")
+            dst = packet.get("dst", "Unknown")
+            protocol = packet.get("protocol", "Unknown")
+            # Add any other packet details you wish to display here
+
+            print(f"Packet #{idx}:")
+            print(f"  Source:      {src}")
+            print(f"  Destination: {dst}")
+            print(f"  Protocol:    {protocol}\n")
+            print("----------------------------------------------------------------")
+
+
     def do_clear(self, arg):
         '''
         `clear`
