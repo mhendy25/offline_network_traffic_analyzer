@@ -1,6 +1,7 @@
 import cmd
 from read_packets import parse
 import os
+import re
 
 class sniffsift(cmd.Cmd):
     
@@ -15,7 +16,10 @@ class sniffsift(cmd.Cmd):
         print(f"Unknown command: {line} \nPlease use 'help' to see a list of commands")
 
     prompt = "+_+ "
-    intro = '\nWelcome to sniffsift, an offline network traffic analyzer.\nThe input of the analyzer is a hexdump text file. Type "help" to see all the available commands. For information on how to use a command, type "help + {command_name}"\n'
+    intro = """\nWelcome to sniffsift, an offline network traffic analyzer.
+The input of the analyzer is a hexdump text file.
+Type "help" to see all the available commands. 
+For information on how to use a command, type "help <command>"\n"""
 
     # Your CLI commands and functionality will go here
 
@@ -52,39 +56,110 @@ class sniffsift(cmd.Cmd):
         self.file = file_name
         count = 1
         # read and parse the file content
-        try:
-            summary, layers, _ = parse(self.file)
-            for item in summary:
-                print(f"Packet {count}")
-                src, dst, protocol = "Unknown", "Unknown", "Unknown"
-                for subitem in item:
-                    print(subitem)
-                    # Example extraction logic based on your summary structure
-                    if "Src:" in subitem:
-                        src = subitem.split("Src: ")[1].split(",")[0]
-                    if "Dst:" in subitem:
-                        dst = subitem.split("Dst: ")[1]
-                    if any(proto in subitem for proto in ["Ethernet", "Internet Protocol", "User Datagram"]):
-                        protocol = subitem.split(",")[0]  # Simplistic approach
+        
+        pckt_lst, _ = parse(self.file)
 
-                self.all_packets.append({"src": src, "dst": dst, "protocol": protocol})
-                count += 1
-                print()
+        # testing
+        # print("Summary length =", len(pckt_lst))
+        # print("summary[0] =", summary[0])
+        
+        for pckt in pckt_lst:
+            print("----------------------------------------------------------------")
+            print(f"Packet {count}")
+            src, dst, protocol = "Unknown", "Unknown", "Unknown"
 
-        except Exception as e:
-            print(f"Failed to read or parse the file: {e}")
-        print(f"Read and stored {len(self.all_packets)} packets.")
+            packet_info = dict()
+
+            packet_info["packet"] = pckt
+            
+            for subitem in pckt.summary:
+                print(subitem)
+                
+                # Regular expressions to extract source and destination addresses for IPv4 and IPv6
+                ethernet_pattern = r"Ethernet II, Src: ([\w:]+), Dst: ([\w:]+)"
+                ipv6_pattern = r"Internet Protocol Version 6, Src: ([\w:]+), Dst: ([\w:]+)"
+                ipv4_pattern = r"Internet Protocol Version 4, Src: ([\d.]+), Dst: ([\d.]+)"
+                udp_pattern = r"User Datagram Protocol, Src Port: (\d+), Dst Port: (\d+)"
+
+                # Extracting Ethernet source and destination
+                eth_match = re.search(ethernet_pattern, subitem)
+                if eth_match:
+                    eth_source = eth_match.group(1)
+                    eth_dest = eth_match.group(2)
+                    packet_info["eth_source"] = eth_source
+                    packet_info["eth_dest"] = eth_dest
+
+                # Extracting IPv6 source and destination
+                ipv6_match = re.search(ipv6_pattern, subitem)
+                if ipv6_match:
+                    ipv6_source = ipv6_match.group(1)
+                    ipv6_dest = ipv6_match.group(2)
+                    packet_info["ipv6_source"] = ipv6_source
+                    packet_info["ipv6_dest"] = ipv6_dest
+
+                # Extracting IPv4 source and destination
+                ipv4_match = re.search(ipv4_pattern, subitem)
+                if ipv4_match:
+                    ipv4_source = ipv4_match.group(1)
+                    ipv4_dest = ipv4_match.group(2)
+                    packet_info["ipv4_source"] = ipv4_source
+                    packet_info["ipv4_dest"] = ipv4_dest
+
+                # Extracting UDP source and destination ports
+                udp_match = re.search(udp_pattern, subitem)
+                if udp_match:
+                    udp_source_port = udp_match.group(1)
+                    udp_dest_port = udp_match.group(2)
+                    packet_info["udp_source_port"] = udp_source_port
+                    packet_info["udp_dest_port"] = udp_dest_port
+                
+                # Extracting DNS/DHCP protocol
+                dns_match = "DNS" in subitem
+                dhcp_match = "DHCP" in subitem
+                if dns_match:
+                    packet_info["protocol"] = "DNS"
+                elif dhcp_match:
+                    packet_info["protocol"] = "DHCP"
+                else:
+                    packet_info["protocol"] = "UDP"
+
+            self.all_packets.append(packet_info)
+            count += 1
+        print("----------------------------------------------------------------")
+        print()
+
+        print(f"Read and stored {len(self.all_packets)} packets.\n\n")
+
+        # testing
+        # print("\n\n\n\n")
+        # print(self.all_packets)
+        # print("\n\n\n\n")
 
     def apply_filters(self, packet):
-        try:
-            if self.current_filters['src_ip'] and packet['src'] != self.current_filters['src_ip']:
+        # try:
+        if self.current_filters['src_ip']:
+            if packet.get("ipv4_source", False) != False:
+                src = packet['ipv4_source']
+            else:
+                src = packet['ipv6_source']
+
+            if src != self.current_filters['src_ip']:
                 return False
-            if self.current_filters['dst_ip'] and packet['dst'] != self.current_filters['dst_ip']:
+            
+        if self.current_filters['dst_ip']:
+
+            if packet.get("ipv4_dest", False) != False:
+                dst = packet['ipv4_dest']
+            else:
+                dst = packet['ipv6_dest']
+
+            if dst != self.current_filters['dst_ip']:
                 return False
-            if self.current_filters['protocol'] and self.current_filters['protocol'].upper() not in packet['protocol'].upper():
-                return False
-        except KeyError:  # If any key is missing, the packet does not match
-            return False
+        
+        if self.current_filters['protocol']:
+            if packet.get("protocol", False) != False:
+                if self.current_filters['protocol'].upper() not in packet['protocol'].upper():
+                    return False
         return True
 
     def update_filtered_packets(self):
@@ -96,6 +171,7 @@ class sniffsift(cmd.Cmd):
         self.current_filters['dst_ip'] = dst_ip
         self.current_filters['protocol'] = protocol
         self.update_filtered_packets()
+        
     
     def do_filter(self, arg):
         '''
@@ -107,18 +183,22 @@ class sniffsift(cmd.Cmd):
         # TODO: send the actual summary instead of the list of dicts 
         # Parse the filter string into a dictionary
 
+        if not self.all_packets:
+            print("No packets to filter. Please read a file first.")
+            return
+
         print("Set your filters (press enter to skip):")
 
         src_ip = input("Source IP filter: ").strip() or None
         dst_ip = input("Destination IP filter: ").strip() or None
-        protocol = input("Protocol filter: ").strip().upper() or None
+        protocol = input("Protocol filter ('DNS' or 'DHCP'): ").strip().upper() or None
 
         # Apply the filters
         self.set_filter(src_ip=src_ip, dst_ip=dst_ip, protocol=protocol)
 
         # Feedback to the user
         if any([src_ip, dst_ip, protocol]):
-            print("Filters applied. Use 'display' to see filtered packets.")
+            print("Filters applied. Use 'display' to see filtered packets.\n\n")
         else:
             print("No filters applied.")
         # filters = {}
@@ -190,20 +270,15 @@ class sniffsift(cmd.Cmd):
             print("No filtered packets to display. Please apply filters first.")
             return
 
-        print("Displaying filtered packets:")
+        count = 1
+        print("\n\nDisplaying filtered packets:\n")
         print("----------------------------------------------------------------")
-        for idx, packet in enumerate(self.filtered_packets, start=1):
-            src = packet.get("src", "Unknown")
-            dst = packet.get("dst", "Unknown")
-            protocol = packet.get("protocol", "Unknown")
-            # Add any other packet details you wish to display here
-
-            print(f"Packet #{idx}:")
-            print(f"  Source:      {src}")
-            print(f"  Destination: {dst}")
-            print(f"  Protocol:    {protocol}\n")
+        for packet in self.filtered_packets:
+            print(f"Packet {count}")
+            print(str(packet["packet"]))
             print("----------------------------------------------------------------")
-
+            count += 1
+        print('\n')
     
     def do_show_all(self, arg):
         '''
@@ -247,39 +322,39 @@ class sniffsift(cmd.Cmd):
         os.system('ls')
         print()
 
-    def do_graph(self, flag):
-        '''
-        `graph {flag}`
+    # def do_graph(self, flag):
+    #     '''
+    #     `graph {flag}`
 
-        Visualize packet flows. Flag 0 for all packets, 1 for filtered packets.
-        '''
-        flag = flag.strip()
-        if flag not in ['0', '1']:
-            print("Invalid flag. Use 0 for all packets or 1 for filtered packets.")
-            return
+    #     Visualize packet flows. Flag 0 for all packets, 1 for filtered packets.
+    #     '''
+    #     flag = flag.strip()
+    #     if flag not in ['0', '1']:
+    #         print("Invalid flag. Use 0 for all packets or 1 for filtered packets.")
+    #         return
 
-        packets_to_graph = self.last_filtered_packets if flag == '1' else self.all_packets
+    #     packets_to_graph = self.last_filtered_packets if flag == '1' else self.all_packets
 
-        if not packets_to_graph:
-            print("No packets to display. Please ensure packets are loaded or filtered correctly.")
-            return
+    #     if not packets_to_graph:
+    #         print("No packets to display. Please ensure packets are loaded or filtered correctly.")
+    #         return
 
-        print("Packet Flows:")
-        print("----------------------------------------------------------------")
+    #     print("\n\nPacket Flows:")
+    #     print("----------------------------------------------------------------")
 
-        for idx, packet in enumerate(packets_to_graph, start=1):
-            src = packet.get("src", "Unknown")
-            dst = packet.get("dst", "Unknown")
-            protocol = packet.get("protocol", "Unknown")
+    #     for idx, packet in enumerate(packets_to_graph, start=1):
+    #         src = packet.get("src", "Unknown")
+    #         dst = packet.get("dst", "Unknown")
+    #         protocol = packet.get("protocol", "Unknown")
 
-            # Creating a multi-line format for each packet
-            print(f"Packet #{idx}:")
-            print(f"  Source:      {src}")
-            print(f"               |")
-            print(f"               |  [{protocol}]")
-            print(f"               V")
-            print(f"  Destination: {dst}\n")
-            print("----------------------------------------------------------------")
+    #         # Creating a multi-line format for each packet
+    #         print(f"Packet #{idx}:")
+    #         print(f"  Source:      {src}")
+    #         print(f"               |")
+    #         print(f"               |  [{protocol}]")
+    #         print(f"               V")
+    #         print(f"  Destination: {dst}\n")
+    #         print("----------------------------------------------------------------")
     
     def do_distribution(self, arg):
         '''
@@ -295,10 +370,11 @@ class sniffsift(cmd.Cmd):
             protocol_counts[protocol] += 1
 
         total_packets = sum(protocol_counts.values())
-        print("Protocol Distribution:")
+        print("\nProtocol Distribution:")
         for protocol, count in protocol_counts.items():
             percentage = (count / total_packets) * 100
             print(f"{protocol}: {percentage:.2f}% ({count} packets)")
+        print()
         
 
     def validate_file(self, file_name):
@@ -314,9 +390,11 @@ class sniffsift(cmd.Cmd):
         elif not self.valid_filetype(file_name):
             print(INVALID_FILETYPE_MSG%(file_name))
         
+
     def valid_path(self, path):
         # validate file path
         return os.path.exists(path)
+    
     
     def valid_filetype(self, file_name):
         # validate file type
