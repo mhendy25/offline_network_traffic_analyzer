@@ -11,6 +11,7 @@ class sniffsift(cmd.Cmd):
         self.all_packets = []
         self.last_filtered_packets = []
         self.current_filters = {'src_ip': None, 'dst_ip': None, 'protocol': None}
+        self.filtered_packets = []
 
     def default(self, line):
         print(f"Unknown command: {line} \nPlease use 'help' to see a list of commands")
@@ -57,7 +58,10 @@ For information on how to use a command, type "help <command>"\n"""
         count = 1
         # read and parse the file content
         
-        pckt_lst, _ = parse(self.file)
+        pckt_lst = parse(self.file)
+
+        if (len(pckt_lst) == 0):
+            return
 
         # testing
         # print("Summary length =", len(pckt_lst))
@@ -114,7 +118,7 @@ For information on how to use a command, type "help <command>"\n"""
                     packet_info["udp_dest_port"] = udp_dest_port
                 
                 # Extracting DNS/DHCP protocol
-                dns_match = "DNS" in subitem
+                dns_match = "Domain Name System" in subitem
                 dhcp_match = "DHCP" in subitem
                 if dns_match:
                     packet_info["protocol"] = "DNS"
@@ -201,59 +205,7 @@ For information on how to use a command, type "help <command>"\n"""
             print("Filters applied. Use 'display' to see filtered packets.\n\n")
         else:
             print("No filters applied.")
-        # filters = {}
-        # try:
-        #     for item in arg.split(","):
-        #         key, value = item.split("=")
-        #         filters[key.strip()] = value.strip()
-        # except ValueError:
-        #     print("Invalid filter format. Please use the correct format.")
-        #     return
 
-        # self.set_filter(src_ip=filters.get('src_ip'), dst_ip=filters.get('dst_ip'), protocol=filters.get('protocol'))
-
-        # # Printing filtered packets
-        # print(f"Filtered {len(self.filtered_packets)} packets based on current filters.")
-        # for packet in self.filtered_packets:
-        #     print(packet)
-
-        # print("my filters", filters)
-
-        # filters_count = len(filters)
-        # print("filters_count", filters_count)
-        # # Read and parse the packets
-        # summary, layers, list_packet_dict = parse(self.file)
-        # print("list_packet_dict", list_packet_dict)
-        # # Filter the packets
-        # filtered_packets = []
-        # for packet in range(len(list_packet_dict)):
-        #     # handle filter by port
-        #     matched = 0 
-        #     if 'src_port' in filters and list_packet_dict[packet][0]['eth'][0] == 'Src: '+filters['src_port']:
-        #         matched +=1
-        #     if 'dst_port' in filters and list_packet_dict[packet][0]['eth'][1] == 'Dst: '+filters['dst_port']:
-        #         matched +=1
-        #     # handle filter by IP
-        #     if 'src_ip' in filters and list_packet_dict[packet][0]['ip'][1] == 'Src: '+filters['src_ip']:
-        #         matched +=1
-        #     if 'dst_ip' in filters and list_packet_dict[packet][0]['ip'][2] == 'Dst: '+filters['dst_ip']:
-        #         matched +=1
-        #     # handle filter by size (data length)
-        #     # check if the packet has data first
-        #     if 'size' in filters and 'data' in list_packet_dict[packet][0] and list_packet_dict[packet][0]['data'][1] == 'Length: '+filters['size']:
-        #         matched +=1
-        #     if matched == filters_count:
-        #         filtered_packets.append(list_packet_dict[packet])
-        #     # test filter is below
-        #     #  filter "src_port=00:14:0b:33:33:27,dst_port=d0:7a:b5:96:cd:0a,src_ip=192.168.1.101,dst_ip=67.252.131.62,size=10"
-
-        # # Print the filtered packets
-        # print("the length of the filtered packets is" , len(filtered_packets))
-        # print("Filtered packets:")
-        # # print(filtered_packets)
-        # for packet in filtered_packets:
-        #     print(packet)
-        #     print()
 
     def do_clear_filter(self,arg):
         '''
@@ -289,19 +241,29 @@ For information on how to use a command, type "help <command>"\n"""
             print("No packets to display. Please read a file first.")
             return
 
-        print("Displaying packets:")
+        
+        count = 1
+        print("\n\nDisplaying packets:")
         print("----------------------------------------------------------------")
-        for idx, packet in enumerate(self.all_packets, start=1):
-            src = packet.get("src", "Unknown")
-            dst = packet.get("dst", "Unknown")
-            protocol = packet.get("protocol", "Unknown")
-            # Add any other packet details you wish to display here
-
-            print(f"Packet #{idx}:")
-            print(f"  Source:      {src}")
-            print(f"  Destination: {dst}")
-            print(f"  Protocol:    {protocol}\n")
+        for packet in self.all_packets:
+            print(f"Packet {count}")
+            print(str(packet["packet"]))
             print("----------------------------------------------------------------")
+            count += 1
+        print('\n')
+
+        # print("----------------------------------------------------------------")
+        # for idx, packet in enumerate(self.all_packets, start=1):
+        #     src = packet.get("src", "Unknown")
+        #     dst = packet.get("dst", "Unknown")
+        #     protocol = packet.get("protocol", "Unknown")
+        #     # Add any other packet details you wish to display here
+
+        #     print(f"Packet #{idx}:")
+        #     print(f"  Source:      {src}")
+        #     print(f"  Destination: {dst}")
+        #     print(f"  Protocol:    {protocol}\n")
+        #     print("----------------------------------------------------------------")
 
 
     def do_clear(self, arg):
@@ -362,6 +324,9 @@ For information on how to use a command, type "help <command>"\n"""
 
         Shows the protocol distribution
         '''
+        if not self.all_packets:
+            print("No packets to report on. Please read a file first.")
+            return
         protocol_counts = {}
         for packet in self.all_packets:
             protocol = packet.get("protocol", "Unknown")
