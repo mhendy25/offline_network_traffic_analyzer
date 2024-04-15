@@ -181,7 +181,7 @@ For information on how to use a command, type "help <command>"\n"""
         '''
         `filter`
 
-        Filter packets based on the filter string. Please follow each command and enter the desired source IP address, destination IP address, and protocol
+        Filter packets based on source/ destination parameters. Type "filter" to view each command and enter the desired source IP address, destination IP address, and protocol.
         '''
         # TODO: filter multiple in the same read
         # TODO: send the actual summary instead of the list of dicts 
