@@ -19,6 +19,7 @@ def parse(hexdump):
 
         cap = pyshark.FileCapture('mycapture.pcap')
 
+
         lst_packet = []
         # lst_packet_dict = []
 
@@ -39,8 +40,11 @@ def parse(hexdump):
 def summary(pkt):
     packet_summary = []
     lst_layer = []
+    packet_size = None
     # packet_list_dict = []
     layers = str(pkt.layers)
+    full_timestamp = pkt.sniff_timestamp
+    timestamp = full_timestamp[-9:]
 
     # print(layers)
 
@@ -90,14 +94,18 @@ def summary(pkt):
                 lst_layer.append(pkt.dhcp)
 
         if ("DATA" in layers):
+            data_len = pkt.data.data_len
             packet_summary.append("Data (" + pkt.data.len + " bytes)")
-            lst_layer.append("Data: {0}\n[Length: {1}]".format(pkt.data.data, pkt.data.len))
+            lst_layer.append("Data: {0}\n[Length: {1}]".format(pkt.data.data, pkt.data.data))
+            packet_size = int(data_len)
             # packet_dict["data"] = ["Data: "+pkt.data.data, "Length: "+pkt.data.len]
         
         # packet_list_dict.append(packet_dict)
 
     if len(packet_summary):
         p = packet(packet_summary, lst_layer)
+        p.size = packet_size
+        p.timestamp = timestamp
         return p
     return None
 

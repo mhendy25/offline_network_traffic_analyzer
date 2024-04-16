@@ -2,6 +2,9 @@ import cmd
 from read_packets import parse
 import os
 import re
+import matplotlib.pyplot as plt
+import numpy as np
+
 
 class sniffsift(cmd.Cmd):
     
@@ -10,7 +13,7 @@ class sniffsift(cmd.Cmd):
         self.file = None 
         self.all_packets = []
         self.last_filtered_packets = []
-        self.current_filters = {'src_ip': None, 'dst_ip': None, 'protocol': None}
+        self.current_filters = {'src_ip': None, 'dst_ip': None, 'protocol': None, 'src_port': None, 'dest_port': None, 'start_time': None, 'end_time': None, 'min_size': None, 'max_size': None}
         self.filtered_packets = []
 
     def default(self, line):
@@ -75,7 +78,6 @@ For information on how to use a command, type "help <command>"\n"""
             packet_info = dict()
 
             packet_info["packet"] = pckt
-            
             for subitem in pckt.summary:
                 print(subitem)
                 
@@ -126,12 +128,17 @@ For information on how to use a command, type "help <command>"\n"""
                     packet_info["protocol"] = "DHCP"
                 else:
                     packet_info["protocol"] = "UDP"
-
+                
+                if pckt.size is not None:
+                    packet_info["size"] = pckt.size
+                
+                if pckt.timestamp is not None:
+                    packet_info["timestamp"] = pckt.timestamp
+            print(self.all_packets)
             self.all_packets.append(packet_info)
             count += 1
         print("----------------------------------------------------------------")
         print()
-
         print(f"Read and stored {len(self.all_packets)} packets.\n\n")
 
         # testing
@@ -140,40 +147,80 @@ For information on how to use a command, type "help <command>"\n"""
         # print("\n\n\n\n")
 
     def apply_filters(self, packet):
-        # try:
+        print(packet)
+        # Filter by source IP
         if self.current_filters['src_ip']:
-            if packet.get("ipv4_source", False) != False:
-                src = packet['ipv4_source']
-            else:
-                src = packet['ipv6_source']
-
+            # Try to fetch IPv4 or IPv6 source, depending on what's available in the packet
+            src = packet.get("ipv4_source", packet.get("ipv6_source", None))
             if src != self.current_filters['src_ip']:
                 return False
-            
+
+        # Filter by destination IP
         if self.current_filters['dst_ip']:
-
-            if packet.get("ipv4_dest", False) != False:
-                dst = packet['ipv4_dest']
-            else:
-                dst = packet['ipv6_dest']
-
+            # Try to fetch IPv4 or IPv6 destination, depending on what's available in the packet
+            dst = packet.get("ipv4_dest", packet.get("ipv6_dest", None))
             if dst != self.current_filters['dst_ip']:
                 return False
-        
+
+        # Filter by protocol
         if self.current_filters['protocol']:
-            if packet.get("protocol", False) != False:
-                if self.current_filters['protocol'].upper() not in packet['protocol'].upper():
-                    return False
+            # Check if the protocol is mentioned in the packet's protocol field
+            if self.current_filters['protocol'].upper() not in packet.get("protocol", "").upper():
+                return False
+
+        # Filter by source port
+        if self.current_filters['src_port']:
+            # The source port can be named differently depending on the protocol, check both common fields
+            src_port = packet.get("udp_source_port", packet.get("tcp_source_port", None))
+            if src_port and src_port != self.current_filters['src_port']:
+                return False
+
+        # Filter by destination port
+        if self.current_filters['dest_port']:
+            # Similarly, check both UDP and TCP destination ports
+            dest_port = packet.get("udp_dest_port", packet.get("tcp_dest_port", None))
+            if dest_port and dest_port != self.current_filters['dest_port']:
+                return False
+        
+        # Filter by packet size
+        if self.current_filters['min_size'] or self.current_filters['max_size']:
+            packet_size = packet.get("size")  
+            if packet_size is None:
+                return False  
+
+            # Check minimum size condition, if set
+            if self.current_filters['min_size'] and packet_size < self.current_filters['min_size']:
+                return False
+
+            # Check maximum size condition, if set
+            if self.current_filters['max_size'] and packet_size > self.current_filters['max_size']:
+                return False
+
+        if self.current_filters['start_time'] or self.current_filters['end_time']:
+            packet_timestamp = int(packet.get("timestamp", "0"))  # Assuming timestamp is already a string of digits
+            start_timestamp = int(self.current_filters['start_time']) if self.current_filters['start_time'] else None
+            end_timestamp = int(self.current_filters['end_time']) if self.current_filters['end_time'] else None
+
+            # Check if the packet's timestamp is within the specified range
+            if start_timestamp and packet_timestamp < start_timestamp:
+                return False
+            if end_timestamp and packet_timestamp > end_timestamp:
+                return False        
+
         return True
 
     def update_filtered_packets(self):
         self.filtered_packets = [packet for packet in self.all_packets if self.apply_filters(packet)]
         self.last_filtered_packets = self.filtered_packets
 
-    def set_filter(self, src_ip=None, dst_ip=None, protocol=None):
+    def set_filter(self, src_ip=None, dst_ip=None, protocol=None, src_port=None, dest_port=None, start_time=None, end_time=None, min_size=None, max_size=None):
         self.current_filters['src_ip'] = src_ip
         self.current_filters['dst_ip'] = dst_ip
         self.current_filters['protocol'] = protocol
+        self.current_filters['src_port'] = src_port
+        self.current_filters['dest_port'] = dest_port
+        self.current_filters['min_size'] = min_size
+        self.current_filters['max_size'] = max_size
         self.update_filtered_packets()
         
     
@@ -196,12 +243,40 @@ For information on how to use a command, type "help <command>"\n"""
         src_ip = input("Source IP filter: ").strip() or None
         dst_ip = input("Destination IP filter: ").strip() or None
         protocol = input("Protocol filter ('DNS' or 'DHCP'): ").strip().upper() or None
+        src_port = input("Source port filter: ").strip() or None
+        dest_port = input("Destination port filter: ").strip() or None
+        min_size = input("Minimum packet size (bytes): ").strip() or None
+
+        if min_size is not None:
+            try:
+                min_size = int(min_size)
+            except ValueError:
+                print("Invalid minimum size.")
+                return
+
+        max_size = input("Maximum packet size (bytes): ").strip() or None
+
+        if max_size is not None:
+            try:
+                max_size = int(max_size)
+            except ValueError:
+                print("Invalid maximum size.")
+                return
+
+        start_timestamp = input("Start timestamp: ").strip().lstrip('0') or None
+        end_timestamp = input("End timestamp: ").strip().lstrip('0') or None
+
+        if start_timestamp:
+            start_timestamp = start_timestamp.zfill(9)
+        if end_timestamp:
+            end_timestamp = end_timestamp.zfill(9)
 
         # Apply the filters
-        self.set_filter(src_ip=src_ip, dst_ip=dst_ip, protocol=protocol)
-
+        self.set_filter(src_ip=src_ip, dst_ip=dst_ip, protocol=protocol,
+                        src_port=src_port, dest_port=dest_port, start_time=start_timestamp, end_time=end_timestamp, min_size=min_size, max_size=max_size)
+        #start_time=start_time, end_time=end_time
         # Feedback to the user
-        if any([src_ip, dst_ip, protocol]):
+        if any([src_ip, dst_ip, protocol, src_port, dest_port, min_size, max_size]):
             print("Filters applied. Use 'display' to see filtered packets.\n\n")
         else:
             print("No filters applied.")
@@ -327,18 +402,57 @@ For information on how to use a command, type "help <command>"\n"""
         if not self.all_packets:
             print("No packets to report on. Please read a file first.")
             return
-        protocol_counts = {}
+
+        relevant_protocols = ['UDP', 'DNS', 'DHCP']
+        protocol_counts = {protocol: 0 for protocol in relevant_protocols}
+
         for packet in self.all_packets:
             protocol = packet.get("protocol", "Unknown")
-            if protocol not in protocol_counts:
-                protocol_counts[protocol] = 0
-            protocol_counts[protocol] += 1
+            if protocol in relevant_protocols:
+                protocol_counts[protocol] += 1
 
         total_packets = sum(protocol_counts.values())
+        if total_packets == 0:
+            print("No relevant packets found.")
+            return
+        
+        print("\nGraph Printed.")
+
         print("\nProtocol Distribution:")
+        labels = []
+        sizes = []
+        explode = []  # this will be used to slightly separate the slices for better visibility
         for protocol, count in protocol_counts.items():
-            percentage = (count / total_packets) * 100
-            print(f"{protocol}: {percentage:.2f}% ({count} packets)")
+            if count > 0:  # Only add to the pie chart if the count is greater than 0
+                percentage = (count / total_packets) * 100
+                print(f"{protocol}: {percentage:.2f}% ({count} packets)")
+                labels.append(protocol)
+                sizes.append(count)
+                explode.append(0)  # adjust this value for more or less separation
+
+
+        def func(pct, allvals):
+            absolute = int(pct/100.*np.sum(allvals))
+            return "{:.1f}%\n({:d} pkts)".format(pct, absolute)
+
+        # Plotting the pie chart
+        fig, ax = plt.subplots()
+        wedges, texts, autotexts = ax.pie(sizes, explode=explode, labels=labels, autopct=lambda pct: func(pct, sizes),
+                                        startangle=90)
+
+        for w in wedges:
+            w.set_edgecolor('w')
+
+        for autotext in autotexts:
+            autotext.set_color('white')
+
+        ax.axis('equal')  
+        plt.title('Protocol Distribution')
+        
+        plt.legend(labels, title="Protocols", loc="best", bbox_to_anchor=(1, 0, 0.5, 1))
+
+        plt.tight_layout()  
+        plt.show(block=False)
         print()
         
 
