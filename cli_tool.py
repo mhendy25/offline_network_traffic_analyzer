@@ -417,24 +417,23 @@ For information on how to use a command, type "help <command>"\n"""
         
         labels = []
         sizes = []
-        percentages = []  # Define percentages list here
+        percentages = []  
         colors = ['blue'] * len(relevant_protocols)  # A list to store colors for each bar
         
         for protocol, count in protocol_counts.items():
             percentage = (count / total_packets) * 100
-            percentages.append(percentage)  # Append percentage to percentages list
+            percentages.append(percentage) 
             labels.append(protocol)
             sizes.append(count)
         
-        plt.clf()  # Clears the previous plot
+        plt.clf() 
     
-        # Calculate simplified y-ticks to improve readability
         max_packets = max(sizes)
-        step = max(1, max_packets // 5)  # Adjust step to reduce the number of y-ticks
+        step = max(1, max_packets // 5)  
         y_ticks = list(range(0, max_packets + step, step))
         
-        plt.plot_size(100, 30)  # Adjust the size to your terminal window if necessary
-        plt.bar(labels, sizes, width=0.8)  # The color parameter is not used here as it's not recognized
+        plt.plot_size(100, 30)  
+        plt.bar(labels, sizes, width=0.8) 
         plt.yticks(y_ticks)
         plt.xlabel("Protocols")
         plt.ylabel("Packets")
@@ -442,7 +441,6 @@ For information on how to use a command, type "help <command>"\n"""
         
         plt.show()
 
-        # Print additional details
         print("\nProtocol Distribution Summary:")
         for i, protocol in enumerate(labels):
             print(f"{protocol}: {sizes[i]} packets ({percentages[i]:.2f}%)")
