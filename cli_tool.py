@@ -1,6 +1,10 @@
 import cmd
 from read_packets import parse
 import os
+import re
+import plotext as plt
+import shutil
+
 
 class sniffsift(cmd.Cmd):
     
@@ -50,10 +54,15 @@ For information on how to use a command, type "help <command>"\n"""
         The packets in the plaintext input hexdump file will be read and parsed.
         '''
         # get the file name/path
-        file_name = arg
+        if arg:
+            file_name = arg
+        else:
+            file_name = ""
     
         # validate the file name/path
-        self.validate_file(file_name)
+        if not self.validate_file(file_name):
+            return
+
         self.file = file_name
         count = 1
         # read and parse the file content
@@ -320,7 +329,7 @@ For information on how to use a command, type "help <command>"\n"""
     
     def do_distribution(self, arg):
         '''
-        'distribution`
+        `distribution`
 
         Shows the protocol distribution
         '''
@@ -340,6 +349,85 @@ For information on how to use a command, type "help <command>"\n"""
             percentage = (count / total_packets) * 100
             print(f"{protocol}: {percentage:.2f}% ({count} packets)")
         print()
+    
+
+    def do_top_talkers(self, arg):
+        '''
+        `top_talkers`
+
+        Shows the distribution of hosts sending packets
+        '''
+        if not self.all_packets:
+            print("No packets to filter. Please read a file first.")
+            return
+        
+        unique_ips = dict()
+        percentages = []
+        
+        # iterate over all the packets and extract the ip
+        for pkt in self.all_packets:
+            if pkt.get("ipv4_source", False) is not False:
+                src = pkt['ipv4_source']
+            else:
+                src = pkt['ipv6_source']
+        # store different ips in dict and count packets
+            unique_ips[src] = unique_ips.get(src, 0) + 1
+
+        for key, value in unique_ips.items():
+            percentages.append( value/len(self.all_packets) * 100  )
+        
+        ips = list(unique_ips.keys())
+
+        # str_percentages = [ str(percentage) for percentage in percentages]
+        color_ips = [plt.colorize(ip, "black", "bold", "default", False) for ip in ips]
+        # print(color_percentatages)
+
+        # print(percentages)
+
+        terminal_width = shutil.get_terminal_size().columns
+        avail =  terminal_width - len(" Top Talkers % by IP ")
+        line_char = "─"*(avail//2) + " Top Talkers % by IP " + "─"*(avail//2)
+
+        # display the bars 
+        print('\n')
+
+        plt.colorize(line_char, "black", "bold", "default", True)
+        print('')
+        plt.simple_bar(color_ips, percentages, width = 100, color=88)
+        
+        plt.show()
+        print('\n')
+    
+    def do_expand(self, arg):
+        '''
+        `expand {packet #}`
+
+        Shows the full contents of the packet specified
+        '''
+        if not self.all_packets:
+            print("No packets to filter. Please read a file first.")
+            return
+
+        arg = int(arg) - 1
+        if arg < 0:
+            print("Please provide a packet number within the range of the packets filtered.")
+            return
+
+        if len(self.filtered_packets) > 0:
+            if arg >= len(self.filtered_packets):
+                print("There is no packet numbered {0}. Please provide a packet number within the range of the packets filtered.".format(arg))
+                return
+            else:
+                for l in self.filtered_packets[arg]["packet"].layers:
+                    print(l)
+        else:
+            if int(arg) >= len(self.all_packets):
+                print("There is no packet numbered {0}. Please provide a packet number within the range of the packets read.".format(arg))
+                return
+            else:
+                for l in self.all_packets[arg]["packet"].layers:
+                    print(l)
+
         
 
     def validate_file(self, file_name):
@@ -352,11 +440,11 @@ For information on how to use a command, type "help <command>"\n"""
 
         if not self.valid_path(file_name):
             print(INVALID_PATH_MSG%(file_name))
-            quit()
+            return False
         elif not self.valid_filetype(file_name):
             print(INVALID_FILETYPE_MSG%(file_name))
-            quit()
-        return
+            return False
+        return True
 
 
     def valid_filetype(self, file_name):
@@ -367,6 +455,9 @@ For information on how to use a command, type "help <command>"\n"""
     def valid_path(self, path):
         # validate file path
         return os.path.exists(path)
+
+    
+
 
     # def precmd(self, line):
     #     # Add custom code here

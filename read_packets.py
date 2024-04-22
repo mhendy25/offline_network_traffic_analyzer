@@ -75,7 +75,7 @@ def summary(pkt):
             if (pkt.dns.flags_response == "True"):
                 packet_summary.append( "Domain Name System (response)")
             else:
-                packet_summary.append( "Domain Name System (query)")
+                packet_summary.append("Domain Name System (query)")
 
             lst_layer.append(pkt.dns)
             # packet_dict["dns"] = ["DNS: "+pkt.dns.qry_name]
