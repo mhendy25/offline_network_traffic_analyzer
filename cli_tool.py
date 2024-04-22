@@ -2,9 +2,7 @@ import cmd
 from read_packets import parse
 import os
 import re
-import matplotlib.pyplot as plt
-import numpy as np
-
+import plotext as plt
 
 class sniffsift(cmd.Cmd):
     
@@ -64,6 +62,7 @@ For information on how to use a command, type "help <command>"\n"""
         pckt_lst = parse(self.file)
 
         if (len(pckt_lst) == 0):
+            print("HERE")
             return
 
         # testing
@@ -405,55 +404,104 @@ For information on how to use a command, type "help <command>"\n"""
 
         relevant_protocols = ['UDP', 'DNS', 'DHCP']
         protocol_counts = {protocol: 0 for protocol in relevant_protocols}
-
+        
         for packet in self.all_packets:
             protocol = packet.get("protocol", "Unknown")
             if protocol in relevant_protocols:
                 protocol_counts[protocol] += 1
-
+        
         total_packets = sum(protocol_counts.values())
         if total_packets == 0:
             print("No relevant packets found.")
             return
         
-        print("\nGraph Printed.")
-
-        print("\nProtocol Distribution:")
         labels = []
         sizes = []
-        explode = []  # this will be used to slightly separate the slices for better visibility
-        for protocol, count in protocol_counts.items():
-            if count > 0:  # Only add to the pie chart if the count is greater than 0
-                percentage = (count / total_packets) * 100
-                print(f"{protocol}: {percentage:.2f}% ({count} packets)")
-                labels.append(protocol)
-                sizes.append(count)
-                explode.append(0)  # adjust this value for more or less separation
-
-
-        def func(pct, allvals):
-            absolute = int(pct/100.*np.sum(allvals))
-            return "{:.1f}%\n({:d} pkts)".format(pct, absolute)
-
-        # Plotting the pie chart
-        fig, ax = plt.subplots()
-        wedges, texts, autotexts = ax.pie(sizes, explode=explode, labels=labels, autopct=lambda pct: func(pct, sizes),
-                                        startangle=90)
-
-        for w in wedges:
-            w.set_edgecolor('w')
-
-        for autotext in autotexts:
-            autotext.set_color('white')
-
-        ax.axis('equal')  
-        plt.title('Protocol Distribution')
+        percentages = []  # Define percentages list here
+        colors = ['blue'] * len(relevant_protocols)  # A list to store colors for each bar
         
-        plt.legend(labels, title="Protocols", loc="best", bbox_to_anchor=(1, 0, 0.5, 1))
+        for protocol, count in protocol_counts.items():
+            percentage = (count / total_packets) * 100
+            percentages.append(percentage)  # Append percentage to percentages list
+            labels.append(protocol)
+            sizes.append(count)
+        
+        plt.clf()  # Clears the previous plot
+    
+        # Calculate simplified y-ticks to improve readability
+        max_packets = max(sizes)
+        step = max(1, max_packets // 5)  # Adjust step to reduce the number of y-ticks
+        y_ticks = list(range(0, max_packets + step, step))
+        
+        plt.plot_size(100, 30)  # Adjust the size to your terminal window if necessary
+        plt.bar(labels, sizes, width=0.8)  # The color parameter is not used here as it's not recognized
+        plt.yticks(y_ticks)
+        plt.xlabel("Protocols")
+        plt.ylabel("Packets")
+        plt.title("Protocol Distribution")
+        
+        plt.show()
 
-        plt.tight_layout()  
-        plt.show(block=False)
-        print()
+        # Print additional details
+        print("\nProtocol Distribution Summary:")
+        for i, protocol in enumerate(labels):
+            print(f"{protocol}: {sizes[i]} packets ({percentages[i]:.2f}%)")
+        print(f"Total packets: {total_packets}\n")
+        # if not self.all_packets:
+        #     print("No packets to report on. Please read a file first.")
+        #     return
+
+        # relevant_protocols = ['UDP', 'DNS', 'DHCP']
+        # protocol_counts = {protocol: 0 for protocol in relevant_protocols}
+
+        # for packet in self.all_packets:
+        #     protocol = packet.get("protocol", "Unknown")
+        #     if protocol in relevant_protocols:
+        #         protocol_counts[protocol] += 1
+
+        # total_packets = sum(protocol_counts.values())
+        # if total_packets == 0:
+        #     print("No relevant packets found.")
+        #     return
+        
+        # print("\nGraph Printed.")
+
+        # print("\nProtocol Distribution:")
+        # labels = []
+        # sizes = []
+        # explode = []  # this will be used to slightly separate the slices for better visibility
+        # for protocol, count in protocol_counts.items():
+        #     if count > 0:  # Only add to the pie chart if the count is greater than 0
+        #         percentage = (count / total_packets) * 100
+        #         print(f"{protocol}: {percentage:.2f}% ({count} packets)")
+        #         labels.append(protocol)
+        #         sizes.append(count)
+        #         explode.append(0)  # adjust this value for more or less separation
+
+
+        # def func(pct, allvals):
+        #     absolute = int(pct/100.*np.sum(allvals))
+        #     return "{:.1f}%\n({:d} pkts)".format(pct, absolute)
+
+        # # Plotting the pie chart
+        # fig, ax = plt.subplots()
+        # wedges, texts, autotexts = ax.pie(sizes, explode=explode, labels=labels, autopct=lambda pct: func(pct, sizes),
+        #                                 startangle=90)
+
+        # for w in wedges:
+        #     w.set_edgecolor('w')
+
+        # for autotext in autotexts:
+        #     autotext.set_color('white')
+
+        # ax.axis('equal')  
+        # plt.title('Protocol Distribution')
+        
+        # plt.legend(labels, title="Protocols", loc="best", bbox_to_anchor=(1, 0, 0.5, 1))
+
+        # plt.tight_layout()  
+        # plt.show(block=False)
+        # print()
         
 
     def validate_file(self, file_name):
