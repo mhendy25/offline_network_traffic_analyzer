@@ -2,13 +2,15 @@ import cmd
 from read_packets import parse
 import os
 import re
+import plotext as plt
 
 class sniffsift(cmd.Cmd):
     
     def __init__(self) :
         super().__init__()
         self.file = None 
-        self.all_packets = []
+        self.all_packets = [] # list of objects, each object contains the whole packet, and a summary (src/ dst IP and protocol)
+        self.original_packets = []
         self.last_filtered_packets = []
         self.current_filters = {'src_ip': None, 'dst_ip': None, 'protocol': None}
         self.filtered_packets = []
@@ -58,7 +60,7 @@ For information on how to use a command, type "help <command>"\n"""
         count = 1
         # read and parse the file content
         
-        pckt_lst = parse(self.file)
+        pckt_lst, self.original_packets = parse(self.file)
 
         if (len(pckt_lst) == 0):
             return
@@ -318,7 +320,7 @@ For information on how to use a command, type "help <command>"\n"""
     #         print(f"  Destination: {dst}\n")
     #         print("----------------------------------------------------------------")
     
-    def do_distribution(self, arg):
+    def do_distribution(self, arg): # TODO: Change name to "do_protocol_distribution"
         '''
         'distribution`
 
@@ -340,7 +342,40 @@ For information on how to use a command, type "help <command>"\n"""
             percentage = (count / total_packets) * 100
             print(f"{protocol}: {percentage:.2f}% ({count} packets)")
         print()
-        
+    
+    def do_packet_distribution(self, arg):
+        '''
+        `packet_distribution`
+
+        Displays a time-series graph of packets' arrival time 
+
+        '''
+        if not self.all_packets:
+            print("No packets to report on. Please read a file first.")
+            return
+        arrival_times = []
+        for i, pkt in enumerate(self.original_packets):
+            # print(pkt.frame_info)
+            try:
+                curr_stamp = pkt.sniff_timestamp
+                curr_stamp_float = float(pkt.sniff_timestamp)
+                print(f"Packet # {i} arrived at time: {plt.colorize(curr_stamp,         201,            'default',   158,             True)}")
+                
+                arrival_times.append(curr_stamp_float)
+            except:
+                print(f"Packet #{i} doesn't have frame info")
+        diff_times = []
+        for i in range(len(arrival_times)-1):
+            diff_times.append((arrival_times[i+1] - arrival_times[i])*1000)
+
+        plt.plot(diff_times, color='red+')
+        plt.title("Packet Arrival Time Difference in Milliseconds")
+        plt.xlabel("Packet #")
+        plt.ylabel("Time Difference")
+        plt.colorize("integer color codes",         201,            "default",   158,             True)
+        plt.show()
+
+
 
     def validate_file(self, file_name):
         '''
