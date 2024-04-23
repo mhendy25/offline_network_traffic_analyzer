@@ -3,6 +3,8 @@ from read_packets import parse
 import os
 import re
 import plotext as plt
+from collections import Counter
+
 
 class sniffsift(cmd.Cmd):
     
@@ -11,8 +13,16 @@ class sniffsift(cmd.Cmd):
         self.file = None 
         self.all_packets = []
         self.last_filtered_packets = []
-        self.current_filters = {'src_ip': None, 'dst_ip': None, 'protocol': None, 'src_port': None, 'dest_port': None, 'start_time': None, 'end_time': None, 'min_size': None, 'max_size': None}
+        self.current_filters = {'src_ip': None, 'dst_ip': None, 'protocol': None, 'src_port': None, 'dest_port': None, 'min_size': None, 'max_size': None, 'src_mac': None, 'dest_mac': None}
         self.filtered_packets = []
+        self.src_ipv4_counter = Counter()
+        self.dest_ipv4_counter = Counter()
+        self.src_ipv6_counter = Counter()
+        self.dest_ipv6_counter = Counter()
+        self.src_port_counter = Counter()
+        self.dest_port_counter = Counter()
+        self.src_mac_counter = Counter()
+        self.dest_mac_counter = Counter()
 
     def default(self, line):
         print(f"Unknown command: {line} \nPlease use 'help' to see a list of commands")
@@ -62,7 +72,6 @@ For information on how to use a command, type "help <command>"\n"""
         pckt_lst = parse(self.file)
 
         if (len(pckt_lst) == 0):
-            print("HERE")
             return
 
         # testing
@@ -93,6 +102,8 @@ For information on how to use a command, type "help <command>"\n"""
                     eth_dest = eth_match.group(2)
                     packet_info["eth_source"] = eth_source
                     packet_info["eth_dest"] = eth_dest
+                    self.src_mac_counter[packet_info['eth_source']] += 1
+                    self.dest_mac_counter[packet_info['eth_dest']] += 1
 
                 # Extracting IPv6 source and destination
                 ipv6_match = re.search(ipv6_pattern, subitem)
@@ -101,6 +112,9 @@ For information on how to use a command, type "help <command>"\n"""
                     ipv6_dest = ipv6_match.group(2)
                     packet_info["ipv6_source"] = ipv6_source
                     packet_info["ipv6_dest"] = ipv6_dest
+                    self.src_ipv6_counter[packet_info['ipv6_source']] += 1
+                    self.dest_ipv6_counter[packet_info['ipv6_dest']] += 1
+
 
                 # Extracting IPv4 source and destination
                 ipv4_match = re.search(ipv4_pattern, subitem)
@@ -109,6 +123,8 @@ For information on how to use a command, type "help <command>"\n"""
                     ipv4_dest = ipv4_match.group(2)
                     packet_info["ipv4_source"] = ipv4_source
                     packet_info["ipv4_dest"] = ipv4_dest
+                    self.src_ipv4_counter[packet_info['ipv4_source']] += 1
+                    self.dest_ipv4_counter[packet_info['ipv4_dest']] += 1
 
                 # Extracting UDP source and destination ports
                 udp_match = re.search(udp_pattern, subitem)
@@ -117,6 +133,8 @@ For information on how to use a command, type "help <command>"\n"""
                     udp_dest_port = udp_match.group(2)
                     packet_info["udp_source_port"] = udp_source_port
                     packet_info["udp_dest_port"] = udp_dest_port
+                    self.src_port_counter[packet_info['udp_source_port']] += 1
+                    self.dest_port_counter[packet_info['udp_dest_port']] += 1
                 
                 # Extracting DNS/DHCP protocol
                 dns_match = "Domain Name System" in subitem
@@ -133,7 +151,6 @@ For information on how to use a command, type "help <command>"\n"""
                 
                 if pckt.timestamp is not None:
                     packet_info["timestamp"] = pckt.timestamp
-            print(self.all_packets)
             self.all_packets.append(packet_info)
             count += 1
         print("----------------------------------------------------------------")
@@ -146,37 +163,31 @@ For information on how to use a command, type "help <command>"\n"""
         # print("\n\n\n\n")
 
     def apply_filters(self, packet):
-        print(packet)
         # Filter by source IP
         if self.current_filters['src_ip']:
-            # Try to fetch IPv4 or IPv6 source, depending on what's available in the packet
             src = packet.get("ipv4_source", packet.get("ipv6_source", None))
             if src != self.current_filters['src_ip']:
                 return False
 
         # Filter by destination IP
         if self.current_filters['dst_ip']:
-            # Try to fetch IPv4 or IPv6 destination, depending on what's available in the packet
             dst = packet.get("ipv4_dest", packet.get("ipv6_dest", None))
             if dst != self.current_filters['dst_ip']:
                 return False
 
         # Filter by protocol
         if self.current_filters['protocol']:
-            # Check if the protocol is mentioned in the packet's protocol field
             if self.current_filters['protocol'].upper() not in packet.get("protocol", "").upper():
                 return False
 
         # Filter by source port
         if self.current_filters['src_port']:
-            # The source port can be named differently depending on the protocol, check both common fields
             src_port = packet.get("udp_source_port", packet.get("tcp_source_port", None))
             if src_port and src_port != self.current_filters['src_port']:
                 return False
 
         # Filter by destination port
         if self.current_filters['dest_port']:
-            # Similarly, check both UDP and TCP destination ports
             dest_port = packet.get("udp_dest_port", packet.get("tcp_dest_port", None))
             if dest_port and dest_port != self.current_filters['dest_port']:
                 return False
@@ -195,16 +206,20 @@ For information on how to use a command, type "help <command>"\n"""
             if self.current_filters['max_size'] and packet_size > self.current_filters['max_size']:
                 return False
 
-        if self.current_filters['start_time'] or self.current_filters['end_time']:
-            packet_timestamp = int(packet.get("timestamp", "0"))  # Assuming timestamp is already a string of digits
-            start_timestamp = int(self.current_filters['start_time']) if self.current_filters['start_time'] else None
-            end_timestamp = int(self.current_filters['end_time']) if self.current_filters['end_time'] else None
-
-            # Check if the packet's timestamp is within the specified range
-            if start_timestamp and packet_timestamp < start_timestamp:
+        # Filter by source MAC
+        if self.current_filters['src_mac']:
+            src = packet.get("eth_source", None)
+            if src != self.current_filters['src_mac']:
                 return False
-            if end_timestamp and packet_timestamp > end_timestamp:
-                return False        
+
+        # Filter by destination MAC
+        if self.current_filters['dest_mac']:
+            dst = packet.get("eth_dest", None)
+            if dst != self.current_filters['dest_mac']:
+                return False
+
+            
+
 
         return True
 
@@ -212,7 +227,7 @@ For information on how to use a command, type "help <command>"\n"""
         self.filtered_packets = [packet for packet in self.all_packets if self.apply_filters(packet)]
         self.last_filtered_packets = self.filtered_packets
 
-    def set_filter(self, src_ip=None, dst_ip=None, protocol=None, src_port=None, dest_port=None, start_time=None, end_time=None, min_size=None, max_size=None):
+    def set_filter(self, src_ip=None, dst_ip=None, protocol=None, src_port=None, dest_port=None, start_time=None, end_time=None, min_size=None, max_size=None, src_mac=None, dest_mac=None):
         self.current_filters['src_ip'] = src_ip
         self.current_filters['dst_ip'] = dst_ip
         self.current_filters['protocol'] = protocol
@@ -220,7 +235,54 @@ For information on how to use a command, type "help <command>"\n"""
         self.current_filters['dest_port'] = dest_port
         self.current_filters['min_size'] = min_size
         self.current_filters['max_size'] = max_size
+        self.current_filters['src_mac'] = src_mac
+        self.current_filters['dest_mac'] = dest_mac
         self.update_filtered_packets()
+
+    #helper function to print out most common
+    def display_common_attributes(self, attribute):
+        if attribute == 'src_ip':
+            print("Most common IPv4 source IPs:")
+            max_length = max(len(ip) for ip, count in self.src_ipv4_counter.most_common(5))
+            for ip, count in self.src_ipv4_counter.most_common(5):
+                if ip is not None:
+                    print(f"{ip:<{max_length}} : {count} times")
+
+        elif attribute == 'dst_ip':
+            print("Most common IPv4 destination IPs:")
+            max_length = max(len(ip) for ip, count in self.dest_ipv4_counter.most_common(5))
+            for ip, count in self.dest_ipv4_counter.most_common(5):
+                if ip is not None:
+                    print(f"{ip:<{max_length}} : {count} times")
+
+        elif attribute == 'src_mac':
+            print("Most common source MAC addresses:")
+            max_length = max(len(mac) for mac, count in self.src_mac_counter.most_common(5))
+            for mac, count in self.src_mac_counter.most_common(5):
+                if mac is not None:
+                    print(f"{mac:<{max_length}} : {count} times")
+
+        elif attribute == 'dest_mac':
+            print("Most common destination MAC addresses:")
+            max_length = max(len(mac) for mac, count in self.dest_mac_counter.most_common(5))
+            for mac, count in self.dest_mac_counter.most_common(5):
+                if mac is not None:
+                    print(f"{mac:<{max_length}} : {count} times")
+
+        elif attribute == 'src_port':
+            print("Most common source ports:")
+            max_length = max(len(port) for port, count in self.src_port_counter.most_common(5))
+            for port, count in self.src_port_counter.most_common(5):
+                if port is not None:
+                    print(f"{port:<{max_length}} : {count} times")
+
+        elif attribute == 'dest_port':
+            print("Most common destination ports:")
+            max_length = max(len(port) for port, count in self.dest_port_counter.most_common(5))
+            for port, count in self.dest_port_counter.most_common(5):
+                if port is not None:
+                    print(f"{port:<{max_length}} : {count} times")
+
         
     
     def do_filter(self, arg):
@@ -237,42 +299,90 @@ For information on how to use a command, type "help <command>"\n"""
             print("No packets to filter. Please read a file first.")
             return
 
-        print("Set your filters (press enter to skip):")
+        filter_options = {
+            '1': 'Filter by Source IP',
+            '2': 'Filter by Destination IP',
+            '3': 'Filter by Source MAC Address',
+            '4': 'Filter by Destination MAC Address',
+            '5': 'Filter by Protocol',
+            '6': 'Filter by Source Port',
+            '7': 'Filter by Destination Port',
+            '8': 'Filter by Minimum Packet Size',
+            '9': 'Filter by Maximum Packet Size',
+            '0': 'Apply Filters and Return'
+        }
+        src_ip = self.current_filters['src_ip']
+        dst_ip = self.current_filters['dst_ip']
+        protocol = self.current_filters['protocol']
+        src_port = self.current_filters['src_port']
+        dest_port = self.current_filters['dest_port']
+        min_size = self.current_filters['min_size']
+        max_size = self.current_filters['max_size']
+        src_mac = self.current_filters['src_mac']
+        dest_mac = self.current_filters['dest_mac']
 
-        src_ip = input("Source IP filter: ").strip() or None
-        dst_ip = input("Destination IP filter: ").strip() or None
-        protocol = input("Protocol filter ('DNS' or 'DHCP'): ").strip().upper() or None
-        src_port = input("Source port filter: ").strip() or None
-        dest_port = input("Destination port filter: ").strip() or None
-        min_size = input("Minimum packet size (bytes): ").strip() or None
+        while True:
+            print("\nSet your filters (choose a number):")
+            for key, value in filter_options.items():
+                print(f"{key}. {value}")
 
-        if min_size is not None:
-            try:
-                min_size = int(min_size)
-            except ValueError:
-                print("Invalid minimum size.")
-                return
+            choice = input("Enter your choice: ").strip()
 
-        max_size = input("Maximum packet size (bytes): ").strip() or None
 
-        if max_size is not None:
-            try:
-                max_size = int(max_size)
-            except ValueError:
-                print("Invalid maximum size.")
-                return
-
-        start_timestamp = input("Start timestamp: ").strip().lstrip('0') or None
-        end_timestamp = input("End timestamp: ").strip().lstrip('0') or None
-
-        if start_timestamp:
-            start_timestamp = start_timestamp.zfill(9)
-        if end_timestamp:
-            end_timestamp = end_timestamp.zfill(9)
+            if choice == '1':
+                self.display_common_attributes('src_ip')
+                src_ip = input("Enter Source IP filter: ").strip() or None
+                self.current_filters['src_ip'] = src_ip
+            elif choice == '2':
+                self.display_common_attributes('dst_ip')
+                dst_ip = input("Enter Destination IP filter: ").strip() or None
+                self.current_filters['dst_ip'] = dst_ip
+            elif choice == '3':
+                self.display_common_attributes('src_mac')
+                src_mac = input("Enter Source MAC filter: ").strip() or None
+                self.current_filters['src_mac'] = src_mac
+            elif choice == '4':
+                self.display_common_attributes('dest_mac')
+                dest_mac = input("Enter Destination MAC filter: ").strip() or None
+                self.current_filters['dest_mac'] = dest_mac
+            elif choice == '5':
+                protocol = input("Enter Protocol filter ('DNS' or 'DHCP'): ").strip().upper() or None
+                self.current_filters['protocol'] = protocol
+            elif choice == '6':
+                self.display_common_attributes('src_port')
+                src_port = input("Enter Source Port filter: ").strip() or None
+                self.current_filters['src_port'] = src_port
+            elif choice == '7':
+                self.display_common_attributes('dest_port')
+                dest_port = input("Enter Destination Port filter: ").strip() or None
+                self.current_filters['dest_port'] = dest_port
+            elif choice == '8':
+                min_size = input("Minimum packet size (bytes): ").strip()
+                if min_size:
+                    try:
+                        min_size = int(min_size)
+                        self.current_filters['min_size'] = min_size
+                    except ValueError:
+                        print("Invalid minimum size. Please enter a whole number.")
+                        continue  
+            elif choice == '9':
+                max_size = input("Maximum packet size (bytes): ").strip()
+                if max_size:
+                    try:
+                        max_size = int(max_size)
+                        self.current_filters['max_size'] = max_size
+                    except ValueError:
+                        print("Invalid maximum size. Please enter a whole number.")
+                        continue  
+            elif choice == '0':
+                break
+            else:
+                print("Invalid choice. Please try again.")
 
         # Apply the filters
         self.set_filter(src_ip=src_ip, dst_ip=dst_ip, protocol=protocol,
-                        src_port=src_port, dest_port=dest_port, start_time=start_timestamp, end_time=end_timestamp, min_size=min_size, max_size=max_size)
+                        src_port=src_port, dest_port=dest_port, min_size=min_size, max_size=max_size, src_mac=src_mac, dest_mac=dest_mac)
+        print(self.current_filters)
         #start_time=start_time, end_time=end_time
         # Feedback to the user
         if any([src_ip, dst_ip, protocol, src_port, dest_port, min_size, max_size]):
@@ -287,12 +397,17 @@ For information on how to use a command, type "help <command>"\n"""
         '''
         self.filtered_packets = {}
         self.last_filtered_packets = {}
+        print("Filters cleared.")
 
     def do_display(self, arg):
         '''
         Display filtered packets. Shows details of packets after filters have been applied.
         '''
-        if not self.filtered_packets:
+
+        if self.current_filters and not self.filtered_packets:
+            print("Filters have been applied but no packets match the criteria. Please adjust the filters.")
+            return
+        elif not self.filtered_packets:
             print("No filtered packets to display. Please apply filters first.")
             return
 
