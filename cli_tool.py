@@ -388,7 +388,6 @@ For information on how to use a command, type "help <command>"\n"""
         # Apply the filters
         self.set_filter(src_ip=src_ip, dst_ip=dst_ip, protocol=protocol,
                         src_port=src_port, dest_port=dest_port, min_size=min_size, max_size=max_size, src_mac=src_mac, dest_mac=dest_mac)
-        print(self.current_filters)
         #start_time=start_time, end_time=end_time
         # Feedback to the user
         if any([src_ip, dst_ip, protocol, src_port, dest_port, min_size, max_size]):
