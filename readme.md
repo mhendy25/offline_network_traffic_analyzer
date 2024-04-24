@@ -40,3 +40,8 @@ Set up brew
 - Install wireshark by running `brew install wireshark` and `brew install --cask wireshark`
 - Check that it worked `brew info --cask wireshark`
 - Add an alias to your path directory `alias wireshark='/Applications/Wireshark.app/Contents/MacOS/Wireshark'`
+- Install Plotext by running  `pip install plotext`
+- To run the program use the following command `./cli_tool.py [.txt file]`. This will read the hexdump and print out the contents.
+- To find out more about the tool write `help` or `help + command_name` to learn more about a function
+- Run `filter` and then choose your desired filters to filter through different settings like IP addresses, port numbers, packet size, etc
+- Run `distribution` to see the protocol break down of the packets including DNS, DHCP, and UDP
