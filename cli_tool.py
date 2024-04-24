@@ -1,9 +1,11 @@
+#!/usr/bin/env python3
 import cmd
 from read_packets import parse
 import os
 import re
 import plotext as plt
 from collections import Counter
+import sys
 
 
 class sniffsift(cmd.Cmd):
@@ -23,6 +25,10 @@ class sniffsift(cmd.Cmd):
         self.dest_port_counter = Counter()
         self.src_mac_counter = Counter()
         self.dest_mac_counter = Counter()
+
+        if len(sys.argv) > 1:
+            file_name = sys.argv[1]
+            self.do_read(file_name)
 
     def default(self, line):
         print(f"Unknown command: {line} \nPlease use 'help' to see a list of commands")
