@@ -26,9 +26,16 @@ class sniffsift(cmd.Cmd):
         self.src_mac_counter = Counter()
         self.dest_mac_counter = Counter()
 
-        if len(sys.argv) > 1:
+        if len(sys.argv) == 2:
             file_name = sys.argv[1]
-            self.do_read(file_name)
+            if self.validate_file(file_name):
+                self.do_read(file_name)
+            else:
+                sys.exit(1)
+        else:
+            print("Please enter 1 .txt file. Usage: ./cli_tool.py <filename>")
+            sys.exit(1)
+            
 
     def default(self, line):
         print(f"Unknown command: {line} \nPlease use 'help' to see a list of commands")
@@ -632,8 +639,11 @@ For information on how to use a command, type "help <command>"\n"""
 
         if not self.valid_path(file_name):
             print(INVALID_PATH_MSG%(file_name))
+            return False
         elif not self.valid_filetype(file_name):
             print(INVALID_FILETYPE_MSG%(file_name))
+            return False
+        return True
         
 
     def valid_path(self, path):
