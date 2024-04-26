@@ -347,27 +347,39 @@ For information on how to use a command, type "help <command>"\n"""
         '''
         `packet_distribution`
 
-        Displays a time-series graph of packets' arrival time 
+        Displays a time-series graph of the delay of packets' arrival time between to hosts  
 
         '''
         if not self.all_packets:
             print("No packets to report on. Please read a file first.")
             return
+        
+        print("Enter the source and destination IP addresses:")
+        src_ip = input("Source IP address: ").strip()
+        dst_ip = input("Destination IP address: ").strip()
         arrival_times = []
         for i, pkt in enumerate(self.original_packets):
             # print(pkt.frame_info)
-            try:
-                curr_stamp = pkt.sniff_timestamp
-                curr_stamp_float = float(pkt.sniff_timestamp)
-                print(f"Packet # {i} arrived at time: {plt.colorize(curr_stamp,         201,            'default',   158,             True)}")
-                
-                arrival_times.append(curr_stamp_float)
-            except:
-                print(f"Packet #{i} doesn't have frame info")
+            layers = str(pkt.layers)
+            if ("IP" in layers):
+                if ("IPV6" in layers):
+                    if pkt.ipv6.src == src_ip and pkt.ipv6.dst == dst_ip:
+                        curr_stamp = pkt.sniff_timestamp
+                        curr_stamp_float = float(pkt.sniff_timestamp)
+                        arrival_times.append(curr_stamp_float)
+                        print(f"Packet # {i} arrived at time: {plt.colorize(curr_stamp,         201,            'default',   158,             True)}")
+                else: # IPV4
+                    if pkt.ip.src == src_ip and pkt.ip.dst == dst_ip:
+                        curr_stamp = pkt.sniff_timestamp
+                        curr_stamp_float = float(pkt.sniff_timestamp)
+                        arrival_times.append(curr_stamp_float)
+                        print(f"Packet # {i} arrived at time: {plt.colorize(curr_stamp,         201,            'default',   158,             True)}")
+            
         diff_times = []
         for i in range(len(arrival_times)-1):
             diff_times.append((arrival_times[i+1] - arrival_times[i])*1000)
 
+        print("the time difference list is: ", diff_times)
         plt.plot(diff_times, color='red+')
         plt.title("Packet Arrival Time Difference in Milliseconds")
         plt.xlabel("Packet #")
