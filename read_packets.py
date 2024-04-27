@@ -3,9 +3,10 @@ import subprocess
 
 
 class packet():
-    def __init__(self, s, l):
+    def __init__(self, s, l, fp):
         self.summary = s
         self.layers = l
+        self.full_packet = fp
 
     def __str__(self):
         return "\n".join(self.summary)
@@ -97,7 +98,7 @@ def summary(pkt):
         # packet_list_dict.append(packet_dict)
 
     if len(packet_summary):
-        p = packet(packet_summary, lst_layer)
+        p = packet(packet_summary, lst_layer, pkt)
         return p
     return None
 

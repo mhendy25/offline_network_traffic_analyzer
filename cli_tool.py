@@ -4,13 +4,13 @@ import os
 import re
 import plotext as plt
 import shutil
-
+from hello import karaoke
 
 class sniffsift(cmd.Cmd):
     
     def __init__(self) :
         super().__init__()
-        self.file = None 
+        self.file = None
         self.all_packets = []
         self.last_filtered_packets = []
         self.current_filters = {'src_ip': None, 'dst_ip': None, 'protocol': None}
@@ -19,26 +19,50 @@ class sniffsift(cmd.Cmd):
     def default(self, line):
         print(f"Unknown command: {line} \nPlease use 'help' to see a list of commands")
 
-    prompt = "+_+ "
-    intro = """\nWelcome to sniffsift, an offline network traffic analyzer.
-The input of the analyzer is a hexdump text file.
-Type "help" to see all the available commands. 
-For information on how to use a command, type "help <command>"\n"""
+    dog = """
+                             ___________________________
+                            /  ________________________ \\
+                            | | C:\> ./sniffsift      | |
+    ,-.___,-.               | |                       | |
+    \_/_ _\_/               | | +_+ hello             | |
+      )O_O(                 | | I've been alone with  | |
+     { (_) } sniff! sniff!  | | you inside my mind 🎶 | |
+      `-^-'                 | |                       | |
+                            | |_______________________| |
+                            \___________________________/
+    """
 
+    project_name = "sniffsift"
+
+    dog = plt.colorize(dog, "red", "bold", "default", False)
+
+    project_name = plt.colorize(project_name, "red", "bold", "default", False)
+
+    prompt = "+_+ "
+    intro =f"""
+    {dog}
+\nWelcome to {project_name}, an offline network traffic analyzer.
+The input of the analyzer is a hexdump text file. 
+Type `menu` to discover the features.
+"""
+    
+    # intro = plt.colorize(intro, "black", "default", 136, False)
 
     # Your CLI commands and functionality will go here
 
-    def do_hello(self, line):
+    def do_hello(self, arg):
         """
         `hello`
 
-        Print a greeting.
+        Karaoke!.
         """
+        
+        karaoke()
 
-        print("Hello, World!")
+        self.do_clear(None)
 
 
-    def do_quit(self, line):
+    def do_quit(self, arg):
         '''
         `quit`
 
@@ -77,16 +101,18 @@ For information on how to use a command, type "help <command>"\n"""
         # print("summary[0] =", summary[0])
         
         for pckt in pckt_lst:
-            print("----------------------------------------------------------------")
-            print(f"Packet {count}")
-            src, dst, protocol = "Unknown", "Unknown", "Unknown"
+
+            if count <= 5:
+                print("----------------------------------------------------------------")
+                print(f"Packet {count}")
 
             packet_info = dict()
 
             packet_info["packet"] = pckt
-            
+        
             for subitem in pckt.summary:
-                print(subitem)
+                if count <= 5:
+                    print(subitem)
                 
                 # Regular expressions to extract source and destination addresses for IPv4 and IPv6
                 ethernet_pattern = r"Ethernet II, Src: ([\w:]+), Dst: ([\w:]+)"
@@ -138,15 +164,27 @@ For information on how to use a command, type "help <command>"\n"""
 
             self.all_packets.append(packet_info)
             count += 1
+
         print("----------------------------------------------------------------")
         print()
+        print(f"Read and stored {len(self.all_packets)} packets.\n")
+        if len(self.all_packets) > 5:
+            print("Use `show {# of packets}` to show more packet summaries.\n")
 
-        print(f"Read and stored {len(self.all_packets)} packets.\n\n")
+        print("Use `menu` to show the menu\n\n")
+        # self.do_show_menu(None)
 
+#         print(f"""1. Filter the packets using `filter`
+# You will be prompted to enter what to filter by.\n
+# 2. Show protocol statistics using `distribution`\n
+# 3. Show most active hosts using `top_talkers`\n
+# \n """)
+        
         # testing
         # print("\n\n\n\n")
         # print(self.all_packets)
         # print("\n\n\n\n")
+
 
     def apply_filters(self, packet):
         # try:
@@ -175,17 +213,19 @@ For information on how to use a command, type "help <command>"\n"""
                     return False
         return True
 
+
     def update_filtered_packets(self):
         self.filtered_packets = [packet for packet in self.all_packets if self.apply_filters(packet)]
         self.last_filtered_packets = self.filtered_packets
+
 
     def set_filter(self, src_ip=None, dst_ip=None, protocol=None):
         self.current_filters['src_ip'] = src_ip
         self.current_filters['dst_ip'] = dst_ip
         self.current_filters['protocol'] = protocol
         self.update_filtered_packets()
-        
-    
+
+
     def do_filter(self, arg):
         '''
         `filter`
@@ -197,7 +237,7 @@ For information on how to use a command, type "help <command>"\n"""
         # Parse the filter string into a dictionary
 
         if not self.all_packets:
-            print("No packets to filter. Please read a file first.")
+            print("\nNo packets to filter. Please read a file first.\n")
             return
 
         print("Set your filters (press enter to skip):")
@@ -211,68 +251,196 @@ For information on how to use a command, type "help <command>"\n"""
 
         # Feedback to the user
         if any([src_ip, dst_ip, protocol]):
-            print("Filters applied. Use 'display' to see filtered packets.\n\n")
+            print("\nFilters applied. Use 'display' to see filtered packets.\n\n")
         else:
-            print("No filters applied.")
+            print("\nNo filters applied.\n")
 
 
-    def do_clear_filter(self,arg):
+    def do_clear_filter(self, arg):
         '''
         Clears Filters
         '''
         self.filtered_packets = {}
         self.last_filtered_packets = {}
 
+        print("\nCleared filters successfully.\n")
+
+        print("Use `menu` to show the menu\n\n")
+
+
     def do_display(self, arg):
         '''
-        Display filtered packets. Shows details of packets after filters have been applied.
+        `display {number of packets}`
+
+        Display filtered packets. Shows summary of packets after filters have been applied.
+        Use `display` to display all filtered packets.
         '''
         if not self.filtered_packets:
-            print("No filtered packets to display. Please apply filters first.")
+            print("\nNo filtered packets to display. Please apply filters first.\n\n")
             return
-
+        if arg:
+            if ( not arg.isdigit() ):
+                print("\nEnter how many packets to display. \n eg: `display 5` to display the first 5 filtered packets.\n\n")
+                return
+            
+            if (int(arg) > len(self.filtered_packets) or int(arg) < 1):
+                print("\nPlease provide a number within the range of the packets filtered.\n\n")
+                return
+            
+            pckt_num = int(arg)
+        else:
+            pckt_num = len(self.filtered_packets)
+        
+            
+        
         count = 1
         print("\n\nDisplaying filtered packets:\n")
         print("----------------------------------------------------------------")
-        for packet in self.filtered_packets:
+        for i in range(pckt_num):
+        # for packet in self.filtered_packets:
             print(f"Packet {count}")
-            print(str(packet["packet"]))
+            print(str(self.filtered_packets[i]["packet"]))
+            # print(str(packet["packet"]))
             print("----------------------------------------------------------------")
             count += 1
         print('\n')
-    
-    def do_show_all(self, arg):
+
+        print("Use `menu` to show the menu\n\n")
+        # self.do_menu(None)
+
+
+    def do_show(self, arg):
         '''
-        Command to show all packets that have been read.
+        `show {number of packets}`
+
+        Command to show packets that have been read (non filtered output).
+        Use `show` to show all packets.
         '''
 
         if not self.all_packets:
-            print("No packets to display. Please read a file first.")
+            print("\nNo packets to display. Please read a file first.\n")
             return
-
         
+        if arg:
+            if ( not arg.isdigit() ):
+                print("Enter how many packets to show. \n eg: `show 5` to display the first 5 packets.\n\n")
+                return
+            
+            if ( int(arg) > len(self.all_packets ) or int(arg) < 1):
+                print("\nPlease provide a number within the range of the packets read.\n\n")
+                return
+            
+            pckt_num = int(arg)
+        else:
+        # if arg is None:
+            pckt_num = len(self.all_packets)
+        # else:
+            
         count = 1
         print("\n\nDisplaying packets:")
         print("----------------------------------------------------------------")
-        for packet in self.all_packets:
+        for i in range(pckt_num):
+        # for packet in self.all_packets:
             print(f"Packet {count}")
-            print(str(packet["packet"]))
+            print(str(self.all_packets[i]["packet"]))
             print("----------------------------------------------------------------")
             count += 1
         print('\n')
 
-        # print("----------------------------------------------------------------")
-        # for idx, packet in enumerate(self.all_packets, start=1):
-        #     src = packet.get("src", "Unknown")
-        #     dst = packet.get("dst", "Unknown")
-        #     protocol = packet.get("protocol", "Unknown")
-        #     # Add any other packet details you wish to display here
+        print("Use `menu` to show the menu\n\n")
+        
 
-        #     print(f"Packet #{idx}:")
-        #     print(f"  Source:      {src}")
-        #     print(f"  Destination: {dst}")
-        #     print(f"  Protocol:    {protocol}\n")
-        #     print("----------------------------------------------------------------")
+    def do_reset(self, arg):
+        '''
+        `reset`
+
+        Erase all stored packet information
+        '''
+        self.file = None 
+        self.all_packets = []
+        self.last_filtered_packets = []
+        self.current_filters = {'src_ip': None, 'dst_ip': None, 'protocol': None}
+        self.filtered_packets = []
+
+        print("\nErased all packets successfully.\n")
+
+        print("Use `menu` to show the menu\n\n")
+
+
+    def do_menu(self, arg):
+        '''
+        `menu`
+
+        Display the functionalities of the program
+        '''
+
+        if not self.all_packets:
+            instructions = """
+Type "help" to see all the available commands. For information 
+on how to use a command, type "help <command>"\n
+1. To read a plain text hexdump file use
+    `read your_hexdump_file.txt`\n
+2. To list files in your current directory use
+    `ls`\n
+3. To clear the screen use
+    `clear`\n
+4. For karaoke use
+    `hello`\n\n"""
+        
+        elif not self.filtered_packets:
+            instructions = """
+Type "help" to see all the available commands. For information 
+on how to use a command, type "help <command>"\n
+1. To filter the packets use
+    `filter`
+    You will be prompted to enter what to filter by.\n
+2. To clear the current filter use
+    `clear_filter`\n
+3. To show protocol statistics use
+    `distribution`\n
+4. To show most active hosts use
+    `top_talkers`\n
+5. To show the full packet use
+    `expand {packet #}`\n
+6. To show packet summaries use
+    `show {# of packets}`\n
+    Use `show` to show all packets\n
+7. To save all packets in a txt file use
+    `save`\n
+    Use `help save` for more options.\n
+8. To delete all the packets use
+    `reset`\n
+9. For karaoke use
+    `hello`\n
+"""
+
+        else:
+            instructions = """
+1. To clear the current filter use
+    `clear_filter`\n
+2. To display filtered packets
+    `display {# of packets}`\n
+3. To show protocol statistics use
+    `distribution`\n
+4. To show the most active hosts use
+    `top_talkers`\n
+5. To show the full filtered packet use
+    `expand {filtered packet #}`\n
+6. To show packet summaries (non filtered) use 
+    `show {# of packets}`\n
+    Use `show` to show all packets\n
+7. To save the packets in a txt file use
+    `save`\n
+    Use `help save` for more options.\n
+8. To delete all the packets use
+    `reset`\n
+9. For karaoke use
+    `hello`\n
+\n """
+
+        print(instructions)
+
+        return
 
 
     def do_clear(self, arg):
@@ -282,6 +450,10 @@ For information on how to use a command, type "help <command>"\n"""
         Clear the screen
         '''
         os.system('clear')
+
+        self.do_menu(None)
+        
+        return
     
     
     def do_ls(self, arg):
@@ -292,41 +464,8 @@ For information on how to use a command, type "help <command>"\n"""
         '''
         os.system('ls')
         print()
-
-    # def do_graph(self, flag):
-    #     '''
-    #     `graph {flag}`
-
-    #     Visualize packet flows. Flag 0 for all packets, 1 for filtered packets.
-    #     '''
-    #     flag = flag.strip()
-    #     if flag not in ['0', '1']:
-    #         print("Invalid flag. Use 0 for all packets or 1 for filtered packets.")
-    #         return
-
-    #     packets_to_graph = self.last_filtered_packets if flag == '1' else self.all_packets
-
-    #     if not packets_to_graph:
-    #         print("No packets to display. Please ensure packets are loaded or filtered correctly.")
-    #         return
-
-    #     print("\n\nPacket Flows:")
-    #     print("----------------------------------------------------------------")
-
-    #     for idx, packet in enumerate(packets_to_graph, start=1):
-    #         src = packet.get("src", "Unknown")
-    #         dst = packet.get("dst", "Unknown")
-    #         protocol = packet.get("protocol", "Unknown")
-
-    #         # Creating a multi-line format for each packet
-    #         print(f"Packet #{idx}:")
-    #         print(f"  Source:      {src}")
-    #         print(f"               |")
-    #         print(f"               |  [{protocol}]")
-    #         print(f"               V")
-    #         print(f"  Destination: {dst}\n")
-    #         print("----------------------------------------------------------------")
     
+
     def do_distribution(self, arg):
         '''
         `distribution`
@@ -334,8 +473,11 @@ For information on how to use a command, type "help <command>"\n"""
         Shows the protocol distribution
         '''
         if not self.all_packets:
-            print("No packets to report on. Please read a file first.")
+            print("\nNo packets to report on. Please read a file first.\n")
             return
+        
+        # print(self.all_packets)
+
         protocol_counts = {}
         for packet in self.all_packets:
             protocol = packet.get("protocol", "Unknown")
@@ -358,7 +500,7 @@ For information on how to use a command, type "help <command>"\n"""
         Shows the distribution of hosts sending packets
         '''
         if not self.all_packets:
-            print("No packets to filter. Please read a file first.")
+            print("\nNo packets to filter. Please read a file first.\n")
             return
         
         unique_ips = dict()
@@ -397,7 +539,10 @@ For information on how to use a command, type "help <command>"\n"""
         
         plt.show()
         print('\n')
+
+        print("Use `menu` to show the menu\n\n")
     
+
     def do_expand(self, arg):
         '''
         `expand {packet #}`
@@ -405,38 +550,110 @@ For information on how to use a command, type "help <command>"\n"""
         Shows the full contents of the packet specified
         '''
         if not self.all_packets:
-            print("No packets to filter. Please read a file first.")
+            print("\nNo packets to filter. Please read a file first.\n")
             return
 
-        arg = int(arg) - 1
-        if arg < 0:
-            print("Please provide a packet number within the range of the packets filtered.")
+        if not arg.isdigit():
+            print("\nEnter which packet to expand. \n eg: `expand 5` to expand packet 5.\n") 
             return
-
-        if len(self.filtered_packets) > 0:
-            if arg >= len(self.filtered_packets):
-                print("There is no packet numbered {0}. Please provide a packet number within the range of the packets filtered.".format(arg))
+        else:
+            arg = int(arg) - 1
+        
+        if ( len(self.filtered_packets) > 0 ):
+            if arg >= len(self.filtered_packets) or arg < 0:
+                print("\nThere is no packet numbered {0}. Please provide a packet number within the range of the packets filtered.\n".format(arg+1))
                 return
             else:
+                print('\n')
                 for l in self.filtered_packets[arg]["packet"].layers:
                     print(l)
         else:
-            if int(arg) >= len(self.all_packets):
-                print("There is no packet numbered {0}. Please provide a packet number within the range of the packets read.".format(arg))
+            if arg >= len(self.all_packets) or arg < 0:
+                print("\nThere is no packet numbered {0}. Please provide a packet number within the range of the packets read. \n".format(arg+1))
                 return
             else:
+                print('\n')
                 for l in self.all_packets[arg]["packet"].layers:
                     print(l)
 
-        
+        print("Use `menu` to show the menu\n\n")
 
+
+    def do_save(self, arg):
+        '''
+        `save {"filter"} {"full"}`
+        
+        Save the summary of the packets in a text file. 
+        Use `save filter` to save the filtered packets only.
+        Use `save full` to save all packets with all details
+        Use `save filter full` to save full filtered packets
+        '''
+        if not self.all_packets:
+            print("\nNo packets to filter. Please read a file first.\n")
+            return
+        
+        pckts = self.all_packets
+
+        if arg:
+            options = arg.split()
+            opt1 = options[0]
+            if len(options) > 1:
+                opt2 = options[1]
+            else:
+                opt2 = ""
+
+            if (len(opt1) > 0) and opt1 != "filter" and opt1 != "full":
+                print("\nInvalid option. Please specify 'filter' or 'full'.\n")
+                return
+            
+            if (len(opt2) > 0) and opt2 != "filter" and opt2 != "full":
+                print("\nInvalid option. Please specify 'filter' or 'full'.\n")
+                return
+        
+            if opt1 == "filter" or opt2 == "filter":
+                if not self.filtered_packets:
+                    print("\nNo packets filtered. Please filter some packets first.\n")
+                    return
+                pckts = self.filtered_packets
+        else:
+            opt1 = ""
+            opt2 = ""
+
+        file_name = input("  > Enter the file name (no extension): ")
+        
+        with open("{}.txt".format(file_name), 'w') as file:
+            # Write content to the file
+            if opt1 == "full" or opt2 == "full":
+                count = 1
+                for pckt in pckts:
+                    file.write(f"Packet {count}\n")
+                    for layer in pckt["packet"].layers:
+                        file.write(str(layer))
+                        file.write("\n")
+                    file.write("\n\n")
+                    count += 1
+            else:
+                count = 1
+                for pckt in pckts:
+                    file.write(f"Packet {count}\n")
+                    for line in pckt["packet"].summary:
+                        file.write(line)
+                        file.write("\n")
+                    file.write("\n\n")
+                    count += 1
+        
+        print("\nFile saved successfully.\n")
+
+        print("\nUse `menu` to show the menu\n\n")
+
+            
     def validate_file(self, file_name):
         '''
         validate file name and path.
         '''
         # error messages
-        INVALID_FILETYPE_MSG = "Error: Invalid file format. %s must be a .txt file."
-        INVALID_PATH_MSG = "Error: Invalid file path/name. Path %s does not exist."
+        INVALID_FILETYPE_MSG = "\nError: Invalid file format. %s must be a .txt file.\n"
+        INVALID_PATH_MSG = "\nError: Invalid file path/name. Path %s does not exist.\n"
 
         if not self.valid_path(file_name):
             print(INVALID_PATH_MSG%(file_name))
@@ -455,30 +672,6 @@ For information on how to use a command, type "help <command>"\n"""
     def valid_path(self, path):
         # validate file path
         return os.path.exists(path)
-
-    
-
-
-    # def precmd(self, line):
-    #     # Add custom code here
-    #     print("Before command execution")
-    #     return line  # You must return the modified or original command line
-    
-
-    # def postcmd(self, stop, line):
-    #     # Add custom code here
-    #     print()
-    #     return stop  # Return 'stop' to control whether the CLI continues or exits
-    
-
-    # def preloop(self):
-    #     # Add custom initialization here
-    #     print("Initialization before the CLI loop")
-    
-
-    # def postloop(self):
-    #     # Add custom cleanup or finalization here
-    #     print("Finalization after the CLI loop")
 
 
 
