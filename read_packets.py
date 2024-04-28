@@ -21,15 +21,19 @@ def parse(hexdump):
         cap = pyshark.FileCapture('mycapture.pcap')
 
         lst_packet = []
+        lst_original_packet = [] # need to send the packet as well for in depth analysis later
         # lst_packet_dict = []
 
         for pkt in cap:
+            # print('my current packet is', pkt.frame_info) to get the arrival time
+
             p = summary(pkt)
             if p:
                 lst_packet.append(p)
+                lst_original_packet.append(pkt)
                 # lst_packet_dict.append(lpd)
         subprocess.run(['rm','mycapture.pcap'])
-        return lst_packet
+        return lst_packet, lst_original_packet
 
     # except Exception as e:
         # print(f"Failed to parse pcap file due to error: {e}")

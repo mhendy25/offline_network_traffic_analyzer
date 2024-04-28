@@ -10,8 +10,9 @@ class sniffsift(cmd.Cmd):
     
     def __init__(self) :
         super().__init__()
-        self.file = None
-        self.all_packets = []
+        self.file = None 
+        self.all_packets = [] # list of objects, each object contains the whole packet, and a summary (src/ dst IP and protocol)
+        self.original_packets = []
         self.last_filtered_packets = []
         self.current_filters = {'src_ip': None, 'dst_ip': None, 'protocol': None}
         self.filtered_packets = []
@@ -20,16 +21,16 @@ class sniffsift(cmd.Cmd):
         print(f"Unknown command: {line} \nPlease use 'help' to see a list of commands")
 
     dog = """
-                             ___________________________
-                            /  ________________________ \\
-                            | | C:\> ./sniffsift      | |
-    ,-.___,-.               | |                       | |
-    \_/_ _\_/               | | +_+ hello             | |
-      )O_O(                 | | I've been alone with  | |
-     { (_) } sniff! sniff!  | | you inside my mind 🎶 | |
-      `-^-'                 | |                       | |
-                            | |_______________________| |
-                            \___________________________/
+                             ____________________________
+                            /  _________________________ \\
+                            | | C:\> ./sniffsift       | |
+    ,-.___,-.               | |                        | |
+    \_/_ _\_/               | | +_+ hello              | |
+      )O_O(                 | | I've been alone with   | |
+     { (_) } sniff! sniff!  | | you inside my mind ... | |
+      `-^-'                 | |                        | |
+                            | |________________________| |
+                            \____________________________/
     """
 
     project_name = "sniffsift"
@@ -54,7 +55,7 @@ Type `menu` to discover the features.
         """
         `hello`
 
-        Karaoke!.
+        Karaoke!
         """
         
         karaoke()
@@ -91,7 +92,7 @@ Type `menu` to discover the features.
         count = 1
         # read and parse the file content
         
-        pckt_lst = parse(self.file)
+        pckt_lst, self.original_packets = parse(self.file)
 
         if (len(pckt_lst) == 0):
             return
@@ -230,7 +231,7 @@ Type `menu` to discover the features.
         '''
         `filter`
 
-        Filter packets based on the filter string. Please follow each command and enter the desired source IP address, destination IP address, and protocol
+        Filter packets based on source/ destination parameters. Type "filter" to view each command and enter the desired source IP address, destination IP address, and protocol.
         '''
         # TODO: filter multiple in the same read
         # TODO: send the actual summary instead of the list of dicts 
@@ -385,7 +386,8 @@ on how to use a command, type "help <command>"\n
 3. To clear the screen use
     `clear`\n
 4. For karaoke use
-    `hello`\n\n"""
+    `hello`
+    Turn the volume up ;-) \n"""
         
         elif not self.filtered_packets:
             instructions = """
@@ -398,20 +400,23 @@ on how to use a command, type "help <command>"\n
     `clear_filter`\n
 3. To show protocol statistics use
     `distribution`\n
-4. To show most active hosts use
+4. To show packet arrival time statistics use
+    `delayviz`\n
+5. To show most active hosts use
     `top_talkers`\n
-5. To show the full packet use
+6. To show the full packet use
     `expand {packet #}`\n
-6. To show packet summaries use
+7. To show packet summaries use
     `show {# of packets}`\n
     Use `show` to show all packets\n
-7. To save all packets in a txt file use
+8. To save all packets in a txt file use
     `save`\n
     Use `help save` for more options.\n
-8. To delete all the packets use
+9. To delete all the packets use
     `reset`\n
-9. For karaoke use
-    `hello`\n
+10. For karaoke use
+    `hello`
+    Turn the volume up ;-)\n
 """
 
         else:
@@ -422,20 +427,23 @@ on how to use a command, type "help <command>"\n
     `display {# of packets}`\n
 3. To show protocol statistics use
     `distribution`\n
-4. To show the most active hosts use
+4. To show packet arrival time statistics use
+    `delayviz`\n
+5. To show the most active hosts use
     `top_talkers`\n
-5. To show the full filtered packet use
+6. To show the full filtered packet use
     `expand {filtered packet #}`\n
-6. To show packet summaries (non filtered) use 
+7. To show packet summaries (non filtered) use 
     `show {# of packets}`\n
     Use `show` to show all packets\n
-7. To save the packets in a txt file use
+8. To save the packets in a txt file use
     `save`\n
     Use `help save` for more options.\n
-8. To delete all the packets use
+9. To delete all the packets use
     `reset`\n
-9. For karaoke use
-    `hello`\n
+10. For karaoke use
+    `hello`
+    Turn the volume up ;-)\n
 \n """
 
         print(instructions)
@@ -464,9 +472,9 @@ on how to use a command, type "help <command>"\n
         '''
         os.system('ls')
         print()
-    
 
-    def do_distribution(self, arg):
+
+    def do_protodist(self, arg):
         '''
         `distribution`
 
@@ -492,6 +500,58 @@ on how to use a command, type "help <command>"\n
             print(f"{protocol}: {percentage:.2f}% ({count} packets)")
         print()
     
+
+    def do_delayviz(self, arg):
+        '''
+        `packet_distribution`
+
+        Displays a time-series graph of the delay of packets' arrival time between to hosts  
+
+        '''
+        if not self.all_packets:
+            print("No packets to report on. Please read a file first.")
+            return
+        
+        print("Enter the source and destination IP addresses:")
+        src_ip = input("Source IP address: ").strip()
+        dst_ip = input("Destination IP address: ").strip()
+        arrival_times = []
+        for i, pkt in enumerate(self.original_packets):
+            # print(pkt.frame_info)
+            layers = str(pkt.layers)
+            if ("IP" in layers):
+                if ("IPV6" in layers):
+                    if pkt.ipv6.src == src_ip and pkt.ipv6.dst == dst_ip:
+                        curr_stamp = pkt.sniff_timestamp
+                        curr_stamp_float = float(pkt.sniff_timestamp)
+                        arrival_times.append(curr_stamp_float)
+                        print(f"\nPacket # {i} arrived at time: {plt.colorize(curr_stamp, 201, 'default', 158, False)}")
+                else: # IPV4
+                    if pkt.ip.src == src_ip and pkt.ip.dst == dst_ip:
+                        curr_stamp = pkt.sniff_timestamp
+                        curr_stamp_float = float(pkt.sniff_timestamp)
+                        arrival_times.append(curr_stamp_float)
+                        print(f"\nPacket # {i} arrived at time: {plt.colorize(curr_stamp, 201, 'default', 158, False)}")
+            
+        diff_times = []
+        for i in range(len(arrival_times)-1):
+            diff_times.append((arrival_times[i+1] - arrival_times[i])*1000)
+        
+        if len(diff_times) == 0:
+            print("\nIncorrect IP addresses. Enter IP addresses that exchange packets.\n")
+            return
+
+        print("\n\nThe time difference list: \n\n", diff_times)
+        print("\n\n")
+        plt.plot(diff_times, color='red+')
+        plt.title("Packet Arrival Time Difference in Milliseconds")
+        plt.xlabel("Packet #")
+        plt.ylabel("Time Difference")
+        # plt.colorize("integer color codes", 201, "default", 158, True)
+        plt.show()
+        print("\n Scroll up above the graph for additional information.\n")
+        print("Use `menu` to show the menu\n")
+
 
     def do_top_talkers(self, arg):
         '''
@@ -646,7 +706,7 @@ on how to use a command, type "help <command>"\n
 
         print("\nUse `menu` to show the menu\n\n")
 
-            
+
     def validate_file(self, file_name):
         '''
         validate file name and path.
