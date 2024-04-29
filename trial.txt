@@ -1,0 +1,21 @@
+Packet 1
+Ethernet II, Src: d0:7a:b5:96:cd:0a, Dst: 00:14:0b:33:33:27
+Internet Protocol Version 4, Src: 192.168.1.1, Dst: 192.168.1.101
+User Datagram Protocol, Src Port: 53, Dst Port: 57311
+Domain Name System (response)
+
+
+Packet 2
+Ethernet II, Src: d0:7a:b5:96:cd:0a, Dst: 00:14:0b:33:33:27
+Internet Protocol Version 4, Src: 192.168.1.1, Dst: 192.168.1.101
+User Datagram Protocol, Src Port: 53, Dst Port: 55365
+Domain Name System (response)
+
+
+Packet 3
+Ethernet II, Src: d0:7a:b5:96:cd:0a, Dst: 00:14:0b:33:33:27
+Internet Protocol Version 4, Src: 192.168.1.1, Dst: 192.168.1.101
+User Datagram Protocol, Src Port: 53, Dst Port: 52244
+Domain Name System (response)
+
+

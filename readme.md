@@ -24,11 +24,13 @@ The cli_tool.py file is the command line interface. It displays the packets read
 # Usage
 
 To use the tool call:
-`python cli_tool.py` or `python3 cli_tool.py`
 
-Call `help` to see what commands are available. 
+Call `help` to see what commands are available or `help command_name` to get a more detailed description of a command. 
 Call `help read` to see how to read a hexdump.txt file.
 
+- To run the program use the following command `./cli_tool.py [.txt file]`. This will read the hex dump and print out the contents.
+- Run `filter` and then choose your desired filters to filter through different settings like IP addresses, port numbers, packet size, etc
+- Run `distribution` to see the protocol breakdown of the packets including DNS, DHCP, and UDP
 
 
 # Packages
@@ -40,3 +42,4 @@ Set up brew
 - Install wireshark by running `brew install wireshark` and `brew install --cask wireshark`
 - Check that it worked `brew info --cask wireshark`
 - Add an alias to your path directory `alias wireshark='/Applications/Wireshark.app/Contents/MacOS/Wireshark'`
+- Install Plotext by running  `pip install plotext`
