@@ -33,12 +33,12 @@ class sniffsift(cmd.Cmd):
             else:
                 sys.exit(1)
         else:
-            print("Please enter 1 .txt file. Usage: ./cli_tool.py <filename>")
+            print("\nPlease enter 1 .txt file. Usage: ./cli_tool.py <filename>\n")
             sys.exit(1)
             
 
     def default(self, line):
-        print(f"Unknown command: {line} \nPlease use 'help' to see a list of commands")
+        print(f"\nUnknown command: {line} \nPlease use 'help' to see a list of commands\n")
 
     prompt = "+_+ "
     intro = """\nWelcome to sniffsift, an offline network traffic analyzer.
@@ -162,8 +162,8 @@ For information on how to use a command, type "help <command>"\n"""
                 if pckt.size is not None:
                     packet_info["size"] = pckt.size
                 
-                if pckt.timestamp is not None:
-                    packet_info["timestamp"] = pckt.timestamp
+                # if pckt.timestamp is not None:
+                #     packet_info["timestamp"] = pckt.timestamp
             self.all_packets.append(packet_info)
             count += 1
         print("----------------------------------------------------------------")
@@ -309,7 +309,7 @@ For information on how to use a command, type "help <command>"\n"""
         # Parse the filter string into a dictionary
 
         if not self.all_packets:
-            print("No packets to filter. Please read a file first.")
+            print("\nNo packets to filter. Please read a file first.\n")
             return
 
         filter_options = {
@@ -359,7 +359,7 @@ For information on how to use a command, type "help <command>"\n"""
                 dest_mac = input("Enter Destination MAC filter: ").strip() or None
                 self.current_filters['dest_mac'] = dest_mac
             elif choice == '5':
-                protocol = input("Enter Protocol filter ('DNS' or 'DHCP'): ").strip().upper() or None
+                protocol = input("Enter Protocol filter ('DNS', 'DHCP' or 'UDP'): ").strip().upper() or None
                 self.current_filters['protocol'] = protocol
             elif choice == '6':
                 self.display_common_attributes('src_port')
@@ -376,7 +376,7 @@ For information on how to use a command, type "help <command>"\n"""
                         min_size = int(min_size)
                         self.current_filters['min_size'] = min_size
                     except ValueError:
-                        print("Invalid minimum size. Please enter a whole number.")
+                        print("\nInvalid minimum size. Please enter a whole number.\n")
                         continue  
             elif choice == '9':
                 max_size = input("Maximum packet size (bytes): ").strip()
@@ -385,22 +385,23 @@ For information on how to use a command, type "help <command>"\n"""
                         max_size = int(max_size)
                         self.current_filters['max_size'] = max_size
                     except ValueError:
-                        print("Invalid maximum size. Please enter a whole number.")
+                        print("\nInvalid maximum size. Please enter a whole number.\n")
                         continue  
             elif choice == '0':
                 break
             else:
-                print("Invalid choice. Please try again.")
+                print("\nInvalid choice. Please try again.\n")
 
         # Apply the filters
         self.set_filter(src_ip=src_ip, dst_ip=dst_ip, protocol=protocol,
                         src_port=src_port, dest_port=dest_port, min_size=min_size, max_size=max_size, src_mac=src_mac, dest_mac=dest_mac)
         #start_time=start_time, end_time=end_time
         # Feedback to the user
-        if any([src_ip, dst_ip, protocol, src_port, dest_port, min_size, max_size]):
-            print("Filters applied. Use 'display' to see filtered packets.\n\n")
+        if any([src_ip, dst_ip, protocol, src_port, dest_port, min_size, max_size, src_mac, dest_mac]):
+            # print("\nFilters applied. Use 'display' to see filtered packets.\n\n")
+            self.do_display(None)
         else:
-            print("No filters applied.")
+            print("\nNo filters applied.\n")
 
 
     def do_clear_filter(self,arg):
@@ -409,18 +410,22 @@ For information on how to use a command, type "help <command>"\n"""
         '''
         self.filtered_packets = {}
         self.last_filtered_packets = {}
-        print("Filters cleared.")
+        self.current_filters = {'src_ip': None, 'dst_ip': None, 'protocol': None, 'src_port': None, 'dest_port': None, 'min_size': None, 'max_size': None, 'src_mac': None, 'dest_mac': None}
+        print("\nFilters cleared.\n")
+
 
     def do_display(self, arg):
         '''
         Display filtered packets. Shows details of packets after filters have been applied.
         '''
 
-        if self.current_filters and not self.filtered_packets:
-            print("Filters have been applied but no packets match the criteria. Please adjust the filters.")
+        filter_flag = all( item is None or  item == ""  for item in self.current_filters.values())
+        
+        if not filter_flag and not self.filtered_packets:
+            print("\nFilters have been applied but no packets match the criteria. Please adjust the filters.\n")
             return
-        elif not self.filtered_packets:
-            print("No filtered packets to display. Please apply filters first.")
+        elif filter_flag or not self.filtered_packets:
+            print("\nNo filtered packets to display. Please apply filters first.\n")
             return
 
         count = 1
@@ -432,7 +437,14 @@ For information on how to use a command, type "help <command>"\n"""
             print("----------------------------------------------------------------")
             count += 1
         print('\n')
+
+        print(f"Current filters for packets above\n")
+        for k, v in self.current_filters.items():
+            if v is not None and v != "":
+                print(f"{k}: {v}\n")
+        
     
+
     def do_show_all(self, arg):
         '''
         Command to show all packets that have been read.
@@ -453,19 +465,6 @@ For information on how to use a command, type "help <command>"\n"""
             count += 1
         print('\n')
 
-        # print("----------------------------------------------------------------")
-        # for idx, packet in enumerate(self.all_packets, start=1):
-        #     src = packet.get("src", "Unknown")
-        #     dst = packet.get("dst", "Unknown")
-        #     protocol = packet.get("protocol", "Unknown")
-        #     # Add any other packet details you wish to display here
-
-        #     print(f"Packet #{idx}:")
-        #     print(f"  Source:      {src}")
-        #     print(f"  Destination: {dst}")
-        #     print(f"  Protocol:    {protocol}\n")
-        #     print("----------------------------------------------------------------")
-
 
     def do_clear(self, arg):
         '''
@@ -485,39 +484,6 @@ For information on how to use a command, type "help <command>"\n"""
         os.system('ls')
         print()
 
-    # def do_graph(self, flag):
-    #     '''
-    #     `graph {flag}`
-
-    #     Visualize packet flows. Flag 0 for all packets, 1 for filtered packets.
-    #     '''
-    #     flag = flag.strip()
-    #     if flag not in ['0', '1']:
-    #         print("Invalid flag. Use 0 for all packets or 1 for filtered packets.")
-    #         return
-
-    #     packets_to_graph = self.last_filtered_packets if flag == '1' else self.all_packets
-
-    #     if not packets_to_graph:
-    #         print("No packets to display. Please ensure packets are loaded or filtered correctly.")
-    #         return
-
-    #     print("\n\nPacket Flows:")
-    #     print("----------------------------------------------------------------")
-
-    #     for idx, packet in enumerate(packets_to_graph, start=1):
-    #         src = packet.get("src", "Unknown")
-    #         dst = packet.get("dst", "Unknown")
-    #         protocol = packet.get("protocol", "Unknown")
-
-    #         # Creating a multi-line format for each packet
-    #         print(f"Packet #{idx}:")
-    #         print(f"  Source:      {src}")
-    #         print(f"               |")
-    #         print(f"               |  [{protocol}]")
-    #         print(f"               V")
-    #         print(f"  Destination: {dst}\n")
-    #         print("----------------------------------------------------------------")
     
     def do_distribution(self, arg):
         '''
@@ -526,7 +492,7 @@ For information on how to use a command, type "help <command>"\n"""
         Shows the protocol distribution
         '''
         if not self.all_packets:
-            print("No packets to report on. Please read a file first.")
+            print("\nNo packets to report on. Please read a file first.\n")
             return
 
         relevant_protocols = ['UDP', 'DNS', 'DHCP']
@@ -539,7 +505,7 @@ For information on how to use a command, type "help <command>"\n"""
         
         total_packets = sum(protocol_counts.values())
         if total_packets == 0:
-            print("No relevant packets found.")
+            print("\nNo relevant packets found.\n")
             return
         
         labels = []
@@ -572,61 +538,7 @@ For information on how to use a command, type "help <command>"\n"""
         for i, protocol in enumerate(labels):
             print(f"{protocol}: {sizes[i]} packets ({percentages[i]:.2f}%)")
         print(f"Total packets: {total_packets}\n")
-        # if not self.all_packets:
-        #     print("No packets to report on. Please read a file first.")
-        #     return
-
-        # relevant_protocols = ['UDP', 'DNS', 'DHCP']
-        # protocol_counts = {protocol: 0 for protocol in relevant_protocols}
-
-        # for packet in self.all_packets:
-        #     protocol = packet.get("protocol", "Unknown")
-        #     if protocol in relevant_protocols:
-        #         protocol_counts[protocol] += 1
-
-        # total_packets = sum(protocol_counts.values())
-        # if total_packets == 0:
-        #     print("No relevant packets found.")
-        #     return
         
-        # print("\nGraph Printed.")
-
-        # print("\nProtocol Distribution:")
-        # labels = []
-        # sizes = []
-        # explode = []  # this will be used to slightly separate the slices for better visibility
-        # for protocol, count in protocol_counts.items():
-        #     if count > 0:  # Only add to the pie chart if the count is greater than 0
-        #         percentage = (count / total_packets) * 100
-        #         print(f"{protocol}: {percentage:.2f}% ({count} packets)")
-        #         labels.append(protocol)
-        #         sizes.append(count)
-        #         explode.append(0)  # adjust this value for more or less separation
-
-
-        # def func(pct, allvals):
-        #     absolute = int(pct/100.*np.sum(allvals))
-        #     return "{:.1f}%\n({:d} pkts)".format(pct, absolute)
-
-        # # Plotting the pie chart
-        # fig, ax = plt.subplots()
-        # wedges, texts, autotexts = ax.pie(sizes, explode=explode, labels=labels, autopct=lambda pct: func(pct, sizes),
-        #                                 startangle=90)
-
-        # for w in wedges:
-        #     w.set_edgecolor('w')
-
-        # for autotext in autotexts:
-        #     autotext.set_color('white')
-
-        # ax.axis('equal')  
-        # plt.title('Protocol Distribution')
-        
-        # plt.legend(labels, title="Protocols", loc="best", bbox_to_anchor=(1, 0, 0.5, 1))
-
-        # plt.tight_layout()  
-        # plt.show(block=False)
-        # print()
         
 
     def validate_file(self, file_name):
@@ -654,28 +566,6 @@ For information on how to use a command, type "help <command>"\n"""
     def valid_filetype(self, file_name):
         # validate file type
         return file_name.endswith('.txt')
-
-    # def precmd(self, line):
-    #     # Add custom code here
-    #     print("Before command execution")
-    #     return line  # You must return the modified or original command line
-    
-
-    # def postcmd(self, stop, line):
-    #     # Add custom code here
-    #     print()
-    #     return stop  # Return 'stop' to control whether the CLI continues or exits
-    
-
-    # def preloop(self):
-    #     # Add custom initialization here
-    #     print("Initialization before the CLI loop")
-    
-
-    # def postloop(self):
-    #     # Add custom cleanup or finalization here
-    #     print("Finalization after the CLI loop")
-
 
 
 if __name__ == "__main__":
