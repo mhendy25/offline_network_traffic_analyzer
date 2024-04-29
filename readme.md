@@ -36,7 +36,7 @@ You can find an example of the plain text hex dump input to this prorgam in the 
 5. Fill the File name where to save the hex dump.
 </br>
 </br>
-<img src="./wireshark_export_packet_dissections.png" alt="WIRESHARK" width="350"/>
+<img src="./wireshark_export_packet_dissections.png" alt="WIRESHARK" width="500"/>
 
 </br>
 
