@@ -99,8 +99,8 @@ def summary(pkt):
                 lst_layer.append(pkt.dhcp)
 
         if ("DATA" in layers):
-            # data_len = pkt.data.data_len
-            packet_summary.append("Data (" + pkt.data.len + " bytes)")
+            data_len = pkt.data.data_len
+            packet_summary.append("Data (" + pkt.data.data_len + " bytes)")
             lst_layer.append("Data: {0}\n[Length: {1}]".format(pkt.data.data, pkt.data.data))
             # packet_size = int(data_len)
             # packet_dict["data"] = ["Data: "+pkt.data.data, "Length: "+pkt.data.len]

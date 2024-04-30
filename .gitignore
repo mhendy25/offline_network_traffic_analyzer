@@ -1,2 +1,6 @@
 */__pycache__/*
 .DS_Store
+build/
+cli_tool.spec
+myenv/
+__pycache__/
