@@ -759,7 +759,9 @@ on how to use a command, type "help <command>"\n
         
         print("Enter the source and destination IP addresses.\nPress enter to skip.")
         src_ip = input("Source IP address: ").strip()
+        self.display_common_attributes('src_ip')
         dst_ip = input("Destination IP address: ").strip()
+        self.display_common_attributes('dst_ip')
         arrival_times = []
         for i, pkt in enumerate(self.original_packets):
             # print(pkt.frame_info)
