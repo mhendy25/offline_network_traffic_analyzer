@@ -788,6 +788,7 @@ on how to use a command, type "help <command>"\n
 
         print("\n\nThe time difference list: \n\n", diff_times)
         print("\n\n")
+        plt.clf()
         plt.plot(diff_times, color='red+')
         plt.title("Packet Arrival Time Difference in Milliseconds")
         plt.xlabel("Packet #")
@@ -985,4 +986,3 @@ on how to use a command, type "help <command>"\n
 
 if __name__ == "__main__":
     sniffsift().cmdloop()
-
