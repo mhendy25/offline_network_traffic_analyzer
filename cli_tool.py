@@ -28,16 +28,23 @@ class sniffsift(cmd.Cmd):
         self.dest_port_counter = Counter()
         self.src_mac_counter = Counter()
         self.dest_mac_counter = Counter()
+        self.setup_environment()
 
-        if len(sys.argv) == 2:
+        if len(sys.argv) > 1:
             file_name = sys.argv[1]
             if self.validate_file(file_name):
                 self.do_read(file_name)
             else:
+                print(f"Error: File '{file_name}' not found or invalid format.")
                 sys.exit(1)
         else:
-            print("\nPlease enter 1 .txt file. Usage: ./cli_tool.py <filename>\n")
-            sys.exit(1)
+            print("No file provided. Type 'read <filename>' to load data.")
+    
+    def setup_environment(self):
+        # Change working directory to the directory of the executable
+        executable_dir = os.path.dirname(sys.executable)
+        os.chdir(executable_dir)
+
             
 
     def default(self, line):
@@ -93,6 +100,30 @@ Type `menu` to discover the features.
         Exit the CLI.
         '''
         return True
+    
+    def do_cd(self, arg):
+        '''
+        `cd <directory>`
+
+        Change the current working directory to the specified path.
+        '''
+        if not arg:
+            print("No directory provided. Usage: cd <directory>")
+            return
+
+        try:
+            os.chdir(arg)
+            print(f"Changed directory to {os.getcwd()}")
+        except Exception as e:
+            print(f"Error: {e}")
+    
+    def do_pwd(self, arg):
+        '''
+        `pwd`
+
+        Print the current working directory.
+        '''
+        print(f"Current directory: {os.getcwd()}")
     
 
     def do_read(self, arg):
@@ -357,7 +388,6 @@ Type `menu` to discover the features.
 
         if not self.all_packets:
             print("\nNo packets to filter. Please read a file first.\n")
-            print("\nNo packets to filter. Please read a file first.\n")
             return
 
         filter_options = {
@@ -422,7 +452,10 @@ Type `menu` to discover the features.
                 if min_size:
                     try:
                         min_size = int(min_size)
-                        self.current_filters['min_size'] = min_size
+                        if min_size < 0:
+                            print("\nInvalid minimum size. Please enter a non-negative whole number.\n")
+                        else:
+                            self.current_filters['min_size'] = min_size
                     except ValueError:
                         print("\nInvalid minimum size. Please enter a whole number.\n")
                         continue  
@@ -431,7 +464,10 @@ Type `menu` to discover the features.
                 if max_size:
                     try:
                         max_size = int(max_size)
-                        self.current_filters['max_size'] = max_size
+                        if max_size < 0:
+                            print("\nInvalid maximum size. Please enter a non-negative whole number.\n")
+                        else:
+                            self.current_filters['max_size'] = max_size
                     except ValueError:
                         print("\nInvalid maximum size. Please enter a whole number.\n")
                         continue  
@@ -478,7 +514,7 @@ Type `menu` to discover the features.
         filter_flag = all( item is None or  item == ""  for item in self.current_filters.values())
         
         if not filter_flag and not self.filtered_packets:
-            print("\nFilters have been applied but no packets match the criteria. Please adjust the filters.\n")
+            print("\nFilters have been applied but no packets match the criteria. Please adjust the filters. Type `clear_filter` to clear the filter.\n")
             return
         elif filter_flag or not self.filtered_packets:
             print("\nNo filtered packets to display. Please apply filters first.\n")
@@ -510,10 +546,27 @@ Type `menu` to discover the features.
             count += 1
         print('\n')
 
-        print(f"Current filters for packets above\n")
-        for k, v in self.current_filters.items():
-            if v is not None and v != "":
-                print(f"{k}: {v}\n")
+        names = {
+            'src_ip': 'Source IP',
+            'dst_ip': 'Destination IP',
+            'protocol': 'Protocol',
+            'src_port': 'Source Port',
+            'dest_port': 'Destination Port',
+            'min_size': 'Minimum Packet Size',
+            'max_size': 'Maximum Packet Size',
+            'src_mac': 'Source MAC',
+            'dest_mac': 'Destination MAC'
+         }
+
+        print("Current filters for packets:\n")
+        for key, value in self.current_filters.items():
+            if value is not None and value != "":
+                print(f"{names.get(key, key)}: {value}\n")
+
+        # print(f"Current filters for packets above\n")
+        # for k, v in self.current_filters.items():
+        #     if v is not None and v != "":
+        #         print(f"{k}: {v}\n")
         
         print("Use `menu` to show the menu\n\n")
         # self.do_menu(None)
@@ -569,7 +622,7 @@ Type `menu` to discover the features.
         self.file = None 
         self.all_packets = []
         self.last_filtered_packets = []
-        self.current_filters = {'src_ip': None, 'dst_ip': None, 'protocol': None}
+        self.current_filters = {'src_ip': None, 'dst_ip': None, 'protocol': None, 'src_port': None, 'dest_port': None, 'min_size': None, 'max_size': None, 'src_mac': None, 'dest_mac': None}
         self.filtered_packets = []
 
         print("\nErased all packets successfully.\n")
@@ -586,8 +639,6 @@ Type `menu` to discover the features.
 
         if not self.all_packets:
             instructions = """
-Type "help" to see all the available commands. For information 
-on how to use a command, type "help <command>"\n
 1. To read a plain text hexdump file
     `read your_hexdump_file.txt`\n
 2. To list files in your current directory
@@ -597,12 +648,11 @@ on how to use a command, type "help <command>"\n
 4. For karaoke
     `hello`
     Turn the volume up ;-) \n
+5. Type "help" to see all the available commands.\n
 """
         
         elif not self.filtered_packets:
             instructions = """
-Type "help" to see all the available commands. For information 
-on how to use a command, type "help <command>"\n
 1. To filter the packets
     `filter`
     You will be prompted to enter what to filter by.\n
@@ -614,6 +664,7 @@ on how to use a command, type "help <command>"\n
     `delayviz`\n
 5. To show most active hosts
     `top_talkers`\n
+6. Type "help" to see all the available commands.\n
 """
 
 # 6. To show the full packet use
@@ -632,19 +683,21 @@ on how to use a command, type "help <command>"\n
 
         else:
             instructions = """
-Type "help" to see all the available commands. For information 
-on how to use a command, type "help <command>"\n
-1. To clear the current filter
+1. To filter the packets
+    `filter`
+    You will be prompted to enter what to filter by.\n
+2. To clear the current filter
     `clear_filter`\n
-2. To display filtered packets
+3. To display filtered packets
     `display {# of packets}`\n
-3. To show the full filtered packet
+4. To show the full filtered packet
     `expand {filtered packet #}`\n
-4. To save the packets in a txt file
+5. To save the packets in a txt file
     `save`\n
     Use `help save` for more options.\n
-5. To delete all the packets
+6. To delete all the packets
     `reset`\n
+7. Type "help" to see all the available commands.
 """
 
 # 3. To show protocol statistics use
@@ -684,7 +737,15 @@ on how to use a command, type "help <command>"\n
 
         List contents of current directory
         '''
-        os.system('ls')
+        excluded_files = {
+            '__pycache__', 'myenv', 'build', 'dist', '.git', 'pyinstaller', 
+            'python', 'pip', 'hello.py', 'lyrics.txt', 'hello.mp3', 
+            'wireshark_export_packet_dissections.png', 'cli_tool.spec', '.DS_Store', '.gitignore'
+        } 
+        entries = os.listdir()  
+        filtered_entries = [entry for entry in entries if entry not in excluded_files]
+        for entry in filtered_entries:
+            print(entry)
         print()
 
 
@@ -988,4 +1049,3 @@ on how to use a command, type "help <command>"\n
 
 if __name__ == "__main__":
     sniffsift().cmdloop()
-
