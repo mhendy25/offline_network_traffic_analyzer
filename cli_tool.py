@@ -28,16 +28,23 @@ class sniffsift(cmd.Cmd):
         self.dest_port_counter = Counter()
         self.src_mac_counter = Counter()
         self.dest_mac_counter = Counter()
+        self.setup_environment()
 
-        if len(sys.argv) == 2:
+        if len(sys.argv) > 1:
             file_name = sys.argv[1]
             if self.validate_file(file_name):
                 self.do_read(file_name)
             else:
+                print(f"Error: File '{file_name}' not found or invalid format.")
                 sys.exit(1)
         else:
-            print("\nPlease enter 1 .txt file. Usage: ./cli_tool.py <filename>\n")
-            sys.exit(1)
+            print("No file provided. Type 'read <filename>' to load data.")
+    
+    def setup_environment(self):
+        # Change working directory to the directory of the executable
+        executable_dir = os.path.dirname(sys.executable)
+        os.chdir(executable_dir)
+
             
 
     def default(self, line):
@@ -93,6 +100,30 @@ Type `menu` to discover the features.
         Exit the CLI.
         '''
         return True
+    
+    def do_cd(self, arg):
+        '''
+        `cd <directory>`
+
+        Change the current working directory to the specified path.
+        '''
+        if not arg:
+            print("No directory provided. Usage: cd <directory>")
+            return
+
+        try:
+            os.chdir(arg)
+            print(f"Changed directory to {os.getcwd()}")
+        except Exception as e:
+            print(f"Error: {e}")
+    
+    def do_pwd(self, arg):
+        '''
+        `pwd`
+
+        Print the current working directory.
+        '''
+        print(f"Current directory: {os.getcwd()}")
     
 
     def do_read(self, arg):
@@ -684,7 +715,15 @@ on how to use a command, type "help <command>"\n
 
         List contents of current directory
         '''
-        os.system('ls')
+        excluded_files = {
+            '__pycache__', 'myenv', 'build', 'dist', '.git', 'pyinstaller', 
+            'python', 'pip', 'hello.py', 'lyrics.txt', 'hello.mp3', 
+            'wireshark_export_packet_dissections.png', 'cli_tool.spec', '.DS_Store', '.gitignore'
+        } 
+        entries = os.listdir()  
+        filtered_entries = [entry for entry in entries if entry not in excluded_files]
+        for entry in filtered_entries:
+            print(entry)
         print()
 
 
@@ -758,7 +797,9 @@ on how to use a command, type "help <command>"\n
             return
         
         print("Enter the source and destination IP addresses.\nPress enter to skip.")
+        self.display_common_attributes('src_ip')
         src_ip = input("Source IP address: ").strip()
+        self.display_common_attributes('dst_ip')
         dst_ip = input("Destination IP address: ").strip()
         arrival_times = []
         for i, pkt in enumerate(self.original_packets):
