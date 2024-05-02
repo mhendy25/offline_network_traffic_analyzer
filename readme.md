@@ -25,6 +25,31 @@ After running the program, the user is be able to save the output of the analyze
 
 </br>
 
+## Packages
+
+Use pyshark Version: 0.4.3
+
+Set up brew
+- get rid of old wireshark. Delete app and run `brew uninstall --force wireshark` to be safe
+- Install wireshark by running `brew install wireshark` and `brew install --cask wireshark`
+- Check that it worked `brew info --cask wireshark`
+- Add an alias to your path directory `alias wireshark='/Applications/Wireshark.app/Contents/MacOS/Wireshark'`
+- Install Plotext by running  `pip install plotext`
+
+</br>
+
+## Usage
+
+1. To run the program use the following command `./cli_tool.py [.txt file]`. This will read the hex dump and print out the contents.
+2. Run `filter` and then choose your desired filters to filter through different settings like IP addresses, port numbers, packet size, etc...
+3. Run `protodist` to see the protocol breakdown of the packets including DNS, DHCP, and UDP
+
+</br>
+
+Type `help` to see all the available commands. For information on how to use a command, type `help <command>`.
+
+</br>
+
 ## The input:
 
 You can find an example of the plain text hex dump input to this prorgam in the `test.txt` file. You can also test the program with your own hex dumps! You can export hex dumps to test the program using Wireshark as follows:
@@ -129,17 +154,6 @@ The `cli_tool.py` file displays the packets read in `read_packets.py` via the `r
 
 </br>
 
-## Usage
-
-1. To run the program use the following command `./cli_tool.py [.txt file]`. This will read the hex dump and print out the contents.
-2. Run `filter` and then choose your desired filters to filter through different settings like IP addresses, port numbers, packet size, etc...
-3. Run `protodist` to see the protocol breakdown of the packets including DNS, DHCP, and UDP
-
-</br>
-
-Type `help` to see all the available commands. For information on how to use a command, type `help <command>`.
-
-</br>
 
 ### Available commands:
 
@@ -220,15 +234,3 @@ Type `help` to see all the available commands. For information on how to use a c
   `save filter full` to save full filtered packets
 
 </br>
-
-
-## Packages
-
-Use pyshark Version: 0.4.3
-
-Set up brew
-- get rid of old wireshark. Delete app and run `brew uninstall --force wireshark` to be safe
-- Install wireshark by running `brew install wireshark` and `brew install --cask wireshark`
-- Check that it worked `brew info --cask wireshark`
-- Add an alias to your path directory `alias wireshark='/Applications/Wireshark.app/Contents/MacOS/Wireshark'`
-- Install Plotext by running  `pip install plotext`
