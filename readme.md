@@ -40,9 +40,8 @@ Set up brew
 
 ## Usage
 
-1. To run the program use the following command `./cli_tool.py [.txt file]`. This will read the hex dump and print out the contents.
-2. Run `filter` and then choose your desired filters to filter through different settings like IP addresses, port numbers, packet size, etc...
-3. Run `protodist` to see the protocol breakdown of the packets including DNS, DHCP, and UDP
+1. To run the program use the following command `./cli_tool [.txt file]`. This will read the hex dump and print out the contents.
+2. Alternatively you can run the executable file called `cli_tool` by double-clicking the executable. Then you can read any file in your directory to start sniffing!
 
 </br>
 
