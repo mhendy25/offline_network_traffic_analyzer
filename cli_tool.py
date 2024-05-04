@@ -41,9 +41,18 @@ class sniffsift(cmd.Cmd):
             print("No file provided. Type 'read <filename>' to load data.")
     
     def setup_environment(self):
-        # Change working directory to the directory of the executable
-        executable_dir = os.path.dirname(sys.executable)
-        os.chdir(executable_dir)
+        try:
+            # Get the directory of the executable
+            executable_dir = os.path.dirname(sys.executable)
+            # Ensure the directory exists
+            if os.path.exists(executable_dir):
+                # Change the working directory
+                os.chdir(executable_dir)
+                logging.info(f"Changed working directory to {executable_dir}")
+            else:
+                logging.error(f"Executable directory does not exist: {executable_dir}")
+        except Exception as e:
+            logging.error(f"Failed to change directory: {e}")
 
             
 
@@ -126,31 +135,7 @@ Type `menu` to discover the features.
         print(f"Current directory: {os.getcwd()}")
     
 
-    def do_read(self, arg):
-        '''
-        `read your_hexdump_file.txt`
-
-        The packets in the plaintext input hexdump file will be read and parsed.
-        '''
-        # get the file name/path
-        if arg:
-            file_name = arg
-        else:
-            file_name = ""
-    
-        # validate the file name/path
-        if not self.validate_file(file_name):
-            return
-
-        self.file = file_name
-        count = 1
-        # read and parse the file content
-        
-        pckt_lst, self.original_packets = parse(self.file)
-
-        if (len(pckt_lst) == 0):
-            return
-
+   
         # testing
         # print("Summary length =", len(pckt_lst))
         # print("summary[0] =", summary[0])
