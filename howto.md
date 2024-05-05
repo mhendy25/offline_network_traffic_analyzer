@@ -19,5 +19,16 @@ Our project has commands like `ls`, `pwd`, and `cd` to allow users to navigate t
 
 ## Running the program with python
 1. Open a terminal window and navigate to the location of the downloaded files.
-2. Ensure you have python installed.
+2. Ensure you have python installed and then install the following
+Set up brew
+
+Get rid of old wireshark. Delete app and run brew uninstall --force wireshark to be safe
+Install wireshark by running brew install wireshark and brew install --cask wireshark
+Check that it worked brew info --cask wireshark
+Add an alias to your path directory alias wireshark='/Applications/Wireshark.app/Contents/MacOS/Wireshark'
+Install Plotext by running pip install plotext or pip3 install plotext
+Install Pyshark by running pip install pyshark==0.4.3 or pip3 install pyshark==0.4.3
+Install Shutil by running pip install pytest-shutil
+
+
 3. Type `python3 cli_tool.py` to open the application or `python3 cli_tool.py [.txt file]` to automatically load the file into the application. Note that if you want to automatically load the file into the application the file must be in the same folder as the application.
