@@ -28,7 +28,7 @@ class sniffsift(cmd.Cmd):
         self.dest_port_counter = Counter()
         self.src_mac_counter = Counter()
         self.dest_mac_counter = Counter()
-        self.setup_environment()
+        #self.setup_environment()
 
         if len(sys.argv) > 1:
             file_name = sys.argv[1]
@@ -40,10 +40,10 @@ class sniffsift(cmd.Cmd):
         else:
             print("No file provided. Type 'read <filename>' to load data.")
     
-    def setup_environment(self):
+    #def setup_environment(self):
         # Change working directory to the directory of the executable
-        executable_dir = os.path.dirname(sys.executable)
-        os.chdir(executable_dir)
+    #    executable_dir = os.path.dirname(sys.executable)
+    #    os.chdir(executable_dir)
 
             
 
