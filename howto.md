@@ -29,6 +29,7 @@ Add an alias to your path directory alias wireshark='/Applications/Wireshark.app
 Install Plotext by running pip install plotext or pip3 install plotext
 Install Pyshark by running pip install pyshark==0.4.3 or pip3 install pyshark==0.4.3
 Install Shutil by running pip install pytest-shutil
+Install Curses by running pip install windows-curses
 
 
 3. Type `python3 cli_tool.py` to open the application or `python3 cli_tool.py [.txt file]` to automatically load the file into the application. Note that if you want to automatically load the file into the application the file must be in the same folder as the application.
