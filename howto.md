@@ -15,4 +15,9 @@ Our project has commands like `ls`, `pwd`, and `cd` to allow users to navigate t
 3. Alternatively, you can just run `./cli_tool` which will open the program where you can then navigate through your directories to find the desired file.
 
 ## Running the executable (MacOS ONLY)
-1. You can run the executable file called `cli_tool` by double-clicking the executable. Then you can read any file in your directory to start sniffing!
+1. You can run the executable file called `cli_tool` by double-clicking the executable. This will open in your root directory where you can use commands like `cd` or `pwd` to help navigate to your desired location.
+
+## Running the program with python
+1. Open a terminal window and navigate to the location of the downloaded files.
+2. Ensure you have python installed.
+3. Type `python3 cli_tool.py` to open the application or `python3 cli_tool.py [.txt file]` to automatically load the file into the application. Note that if you want to automatically load the file into the application the file must be in the same folder as the application.
