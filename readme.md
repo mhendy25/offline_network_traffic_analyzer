@@ -35,6 +35,10 @@ Set up brew
 - Check that it worked `brew info --cask wireshark`
 - Add an alias to your path directory `alias wireshark='/Applications/Wireshark.app/Contents/MacOS/Wireshark'`
 - Install Plotext by running  `pip install plotext`
+- Install Pyshark by running pip install pyshark==0.4.3 or pip3 install pyshark==0.4.3 
+- Install Shutil by running pip install pytest-shutil
+
+
 
 </br>
 
