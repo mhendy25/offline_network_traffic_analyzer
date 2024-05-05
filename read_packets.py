@@ -39,7 +39,7 @@ def parse(hexdump):
     # except Exception as e:
         # print(f"Failed to parse pcap file due to error: {e}")
     except FileNotFoundError:
-        return []
+        return [], []
     
 
 def summary(pkt):
